@@ -63,12 +63,12 @@ step flags it again.
 
 ## Status
 
-- [x] Session recorder — clickable prototype, three-level scale
-- [x] Canvas roster pull — `scripts/fetch_roster.py`
-- [ ] App reads `roster.json` instead of generated demo names
-- [ ] Per-device export and merge into one weekly file
-- [ ] Backup step to OneDrive
-- [ ] Analysis over the semester
+Recording a session works end to end: pull the roster, import it on each
+phone, record a week offline, export it. What is still missing is everything
+after the export — merging the two TAs' files, backing them up, and analysis.
+
+See [TODO.md](TODO.md), which is the single list. Keeping a second copy here
+only guarantees the two drift apart.
 
 ## Configuration
 
