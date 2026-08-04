@@ -1,0 +1,9 @@
+# Credentials and anything identifying a student stay out of version control.
+config.json
+data/
+*.sqlite
+*.sqlite-journal
+
+.DS_Store
+__pycache__/
+*.pyc

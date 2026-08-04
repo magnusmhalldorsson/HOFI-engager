@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>HOFI — Session Recorder</title>
+<style>
+  :root {
+    --ground:#e9ecea; --surface:#fff; --surface-2:#f2f5f3;
+    --ink:#16201d; --ink-soft:#5d6d68; --ink-faint:#94a29d;
+    --rule:#d2dad6; --teal:#0e6e63; --teal-soft:#d6e8e5;
+    --done:#2f7d4f; --alert:#b4531b; --on-teal:#fff;
+    --shadow:0 1px 2px rgba(20,40,35,.08),0 4px 14px rgba(20,40,35,.06);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --ground:#10161a; --surface:#1a2226; --surface-2:#222c31;
+    --ink:#e6ecea; --ink-soft:#9fb0ab; --ink-faint:#6d7f7a;
+    --rule:#2e3a3f; --teal:#4bbfae; --teal-soft:#1d3b39;
+    --done:#56b07a; --alert:#e08a4e; --on-teal:#10161a;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
+       font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+  button{font:inherit;color:inherit;cursor:pointer}
+  button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .frame{max-width:27rem;margin:0 auto;min-height:100vh;background:var(--surface);
+         box-shadow:var(--shadow);display:flex;flex-direction:column}
+  .top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--rule);
+       padding:.7rem 1rem .6rem;padding-top:max(.7rem,env(safe-area-inset-top))}
+  .top-row{display:flex;align-items:baseline;gap:.6rem}
+  .course{font-weight:700;letter-spacing:-.01em}
+  .who{margin-left:auto;font-size:.78rem;color:var(--ink-soft)}
+  .dots{display:flex;gap:3px;margin-top:.55rem}
+  .dot{flex:1;height:4px;border-radius:2px;background:var(--rule)}
+  .dot.done{background:var(--done)} .dot.cur{background:var(--teal)}
+  .stepper{display:flex;align-items:center;gap:.75rem;padding:1rem 1rem .4rem}
+  .step-btn{width:3rem;height:3rem;border-radius:50%;border:1px solid var(--rule);
+            background:var(--surface-2);font-size:1.4rem;line-height:1;display:grid;place-items:center;flex:none}
+  .step-btn:disabled{opacity:.3;cursor:default}
+  .gnum{flex:1;text-align:center}
+  .gnum .lab{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+  .gnum .val{font-size:2.6rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+  section{padding:.9rem 1rem;border-top:1px solid var(--rule)}
+  .sec-head{display:flex;align-items:baseline;gap:.5rem;margin-bottom:.6rem}
+  .sec-title{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+  .sec-note{margin-left:auto;font-size:.75rem;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+  .seats{display:flex;flex-wrap:wrap;gap:.4rem}
+  .seat{display:inline-flex;align-items:center;gap:.4rem;background:var(--teal-soft);border-radius:999px;
+        padding:.45rem .5rem .45rem .85rem;font-size:.88rem}
+  .seat .x{border:none;background:none;padding:0 .2rem;color:var(--ink-soft);font-size:1.05rem;line-height:1}
+  .add{border:1px dashed var(--rule);background:none;color:var(--teal);border-radius:999px;
+       padding:.45rem 1rem;font-size:.88rem;font-weight:600}
+  .empty{color:var(--ink-faint);font-size:.88rem;font-style:italic}
+  .picker{margin-top:.7rem;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+  .picker input{width:100%;border:none;border-bottom:1px solid var(--rule);padding:.7rem .85rem;
+                font-size:1rem;background:var(--surface-2);color:var(--ink)}
+  .names{max-height:14rem;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule)}
+  .name{background:var(--surface);border:none;text-align:left;padding:.6rem;font-size:.82rem;line-height:1.25;min-height:3rem}
+  .name.taken{color:var(--ink-faint);text-decoration:line-through}
+  .name.here{background:var(--teal-soft);font-weight:600}
+  .none{grid-column:1/-1;background:var(--surface);padding:1rem;text-align:center;color:var(--ink-faint);font-size:.85rem}
+  .factor+.factor{margin-top:.7rem}
+  .flabel{display:flex;align-items:baseline;gap:.4rem;margin-bottom:.3rem}
+  .fname{font-weight:600;font-size:.92rem}
+  .fhint{font-size:.74rem;color:var(--ink-faint)}
+  .scale{display:grid;gap:.35rem}
+  .sbtn{border:1px solid var(--rule);background:var(--surface-2);border-radius:7px;padding:.65rem .2rem;
+        font-size:.8rem;font-weight:600;text-align:center}
+  .sbtn[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--on-teal)}
+  .foot{margin-top:auto;padding:.9rem 1rem;padding-bottom:max(1.4rem,env(safe-area-inset-bottom));
+        border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:.55rem;
+        background:var(--surface);position:sticky;bottom:0}
+  .next{width:100%;border:none;background:var(--teal);color:var(--on-teal);font-weight:700;
+        font-size:1rem;padding:.95rem;border-radius:9px}
+  .minor{display:flex;gap:.55rem}
+  .minor button{flex:1;border:1px solid var(--rule);background:var(--surface-2);border-radius:8px;padding:.6rem;font-size:.82rem}
+  .panel{padding:1rem;padding-top:max(1rem,env(safe-area-inset-top))}
+  .panel h2{font-size:1.15rem;margin:0 0 .3rem}
+  .panel .sub{color:var(--ink-soft);font-size:.88rem;margin:0 0 1.1rem}
+  label{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+        color:var(--ink-faint);font-weight:700;margin:.9rem 0 .3rem}
+  input[type=text],input[type=number],textarea,select{width:100%;padding:.7rem .8rem;border:1px solid var(--rule);
+        border-radius:8px;background:var(--surface-2);color:var(--ink);font:inherit}
+  textarea{font-family:var(--mono);font-size:.75rem;min-height:7rem;resize:vertical}
+  .row{display:flex;gap:.6rem}.row>*{flex:1}
+  .stat-row{display:flex;gap:.6rem;margin-bottom:.9rem}
+  .stat{flex:1;background:var(--surface-2);border-radius:8px;padding:.6rem;text-align:center}
+  .stat b{display:block;font-size:1.5rem;font-variant-numeric:tabular-nums;line-height:1.1}
+  .stat span{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-faint);font-weight:700}
+  .absent{display:flex;flex-wrap:wrap;gap:.3rem}
+  .absent span{background:var(--surface-2);border-radius:4px;padding:.2rem .45rem;font-size:.78rem}
+  .warn{background:var(--surface-2);border-left:3px solid var(--alert);padding:.6rem .8rem;
+        font-size:.83rem;border-radius:0 6px 6px 0;margin-bottom:.9rem}
+  .ok{background:var(--surface-2);border-left:3px solid var(--done);padding:.6rem .8rem;
+      font-size:.83rem;border-radius:0 6px 6px 0}
+  .hidden{display:none}
+  .note{font-size:.78rem;color:var(--ink-faint)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <!-- ============ SETUP ============ -->
+  <div id="setup" class="panel hidden">
+    <h2>Set up this phone</h2>
+    <p class="sub">Done once per device. Everything stays on this phone until you export.</p>
+
+    <div id="rosterState"></div>
+
+    <label for="file">Load roster.json</label>
+    <input type="file" id="file" accept="application/json,.json">
+    <p class="note">Produced by <code>fetch_roster.py roster</code>. Mail or AirDrop it to the phone, then pick it here.</p>
+
+    <label for="paste">…or paste it</label>
+    <textarea id="paste" placeholder='{"course":"HOFI","students":[…]}'></textarea>
+    <button class="next" id="usePaste" style="margin-top:.5rem">Use pasted roster</button>
+
+    <label for="ta">Who is recording?</label>
+    <input type="text" id="ta" placeholder="Sara" autocomplete="off">
+
+    <div class="row">
+      <div><label for="gfrom">First group</label><input type="number" id="gfrom" min="1" value="1"></div>
+      <div><label for="gto">Last group</label><input type="number" id="gto" min="1" value="15"></div>
+    </div>
+
+    <label for="week">Week</label>
+    <input type="number" id="week" min="1" max="12" value="1">
+
+    <button class="next" id="startBtn" style="margin-top:1.2rem">Start recording</button>
+    <div class="minor" style="margin-top:.55rem">
+      <button id="wipe">Erase everything on this phone</button>
+    </div>
+  </div>
+
+  <!-- ============ SESSION ============ -->
+  <div id="main" class="hidden">
+    <div class="top">
+      <div class="top-row">
+        <span class="course">HOFI</span>
+        <span class="note" id="weeklab"></span>
+        <span class="who" id="wholab"></span>
+      </div>
+      <div class="dots" id="dots"></div>
+    </div>
+
+    <div class="stepper">
+      <button class="step-btn" id="prev" aria-label="Previous group">&lsaquo;</button>
+      <div class="gnum"><div class="lab">Group</div><div class="val" id="gval">1</div></div>
+      <button class="step-btn" id="nextG" aria-label="Next group">&rsaquo;</button>
+    </div>
+
+    <section>
+      <div class="sec-head">
+        <span class="sec-title">At this table</span>
+        <span class="sec-note" id="seatcount">0 assigned</span>
+      </div>
+      <div class="seats" id="seats"></div>
+      <div class="picker hidden" id="picker">
+        <input type="search" id="search" placeholder="Type a name…" autocomplete="off" aria-label="Search students">
+        <div class="names" id="names"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="sec-title">Engagement</span></div>
+      <div id="factors"></div>
+    </section>
+
+    <div class="foot">
+      <button class="next" id="advance">Save &amp; next group</button>
+      <div class="minor">
+        <button id="toSummary">Finish &amp; export</button>
+        <button id="toSetup">Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SUMMARY ============ -->
+  <div id="summary" class="panel hidden">
+    <h2 id="sumTitle"></h2>
+    <p class="sub">Export, then send the file to Magnús — mail, OneDrive, whatever is to hand.</p>
+    <div class="stat-row">
+      <div class="stat"><b id="sGroups">0</b><span>groups done</span></div>
+      <div class="stat"><b id="sPresent">0</b><span>present</span></div>
+      <div class="stat"><b id="sAbsent">0</b><span>unassigned</span></div>
+    </div>
+    <div id="dupwarn" class="warn hidden"></div>
+    <div id="incomplete" class="warn hidden"></div>
+    <button class="next" id="exportBtn">Export this week</button>
+    <p class="sec-title" style="margin:1.2rem 0 .4rem">Unassigned — treated as absent</p>
+    <div class="absent" id="absentlist"></div>
+    <div class="minor" style="margin-top:1.2rem">
+      <button id="back">Back to session</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ---------------------------------------------------------------------------
+   CONFIGURATION — the extension point.
+   Add a factor here and it appears everywhere; earlier weeks simply carry no
+   value for it, which the analysis step treats as "not recorded".
+--------------------------------------------------------------------------- */
+const FACTORS = [
+  { key:"participation", name:"Participation", hint:"took part in the discussion" },
+  { key:"preparation",   name:"Preparation",   hint:"arrived having done the reading" },
+  { key:"collaboration", name:"Collaboration", hint:"worked as a group, not in parallel" },
+  { key:"progress",      name:"Progress",      hint:"got somewhere with the problem" }
+];
+const SCALE = ["Below", "Expected", "Above"];
+/* ------------------------------------------------------------------------ */
+
+const K = { roster:"hofi.roster", device:"hofi.device", sessions:"hofi.sessions" };
+const el = id => document.getElementById(id);
+const read = (k, fb) => { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch (e) { return fb; } };
+const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+let roster  = read(K.roster, null);
+let device  = read(K.device, null);
+let sessions = read(K.sessions, {});
+let week = null;
+
+const students = () => (roster && roster.students) || [];
+const byId = id => students().find(s => s.id === id);
+const session = () => sessions[week];
+const groupNums = () => {
+  const out = [];
+  for (let n = device.from; n <= device.to; n++) out.push(n);
+  return out;
+};
+const isComplete = g => g.students.length > 0 && FACTORS.every(f => g.scores[f.key] != null);
+const assignedIds = () => new Set(Object.values(session().groups).flatMap(g => g.students));
+
+function show(which) {
+  ["setup","main","summary"].forEach(id => el(id).classList.toggle("hidden", id !== which));
+  window.scrollTo(0, 0);
+}
+
+/* ---------------- setup ---------------- */
+
+function renderRosterState() {
+  const box = el("rosterState");
+  if (roster) {
+    box.className = "ok";
+    box.textContent = students().length + " students loaded" +
+      (roster.fetched ? " · fetched " + roster.fetched.slice(0, 10) : "");
+  } else {
+    box.className = "warn";
+    box.textContent = "No roster on this phone yet. Load or paste one below.";
+  }
+}
+
+function acceptRoster(text) {
+  let data;
+  try { data = JSON.parse(text); }
+  catch (e) { alert("That is not valid JSON."); return false; }
+  const list = Array.isArray(data) ? data : data.students;
+  if (!Array.isArray(list) || !list.length) { alert("No students found in that file."); return false; }
+  const clean = list
+    .filter(s => s && s.id != null && s.name)
+    .map(s => ({ id: String(s.id), name: String(s.name), sortable: String(s.sortable || s.name) }));
+  if (!clean.length) { alert("Entries need an id and a name."); return false; }
+  clean.sort((a, b) => a.sortable.localeCompare(b.sortable, "is"));
+  roster = { course: data.course || "HOFI", fetched: data.fetched || null, students: clean };
+  write(K.roster, roster);
+  renderRosterState();
+  return true;
+}
+
+el("file").onchange = ev => {
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { if (acceptRoster(r.result)) alert("Roster loaded."); };
+  r.readAsText(f);
+};
+
+el("usePaste").onclick = () => {
+  if (acceptRoster(el("paste").value)) { el("paste").value = ""; alert("Roster loaded."); }
+};
+
+el("startBtn").onclick = () => {
+  if (!roster) { alert("Load a roster first."); return; }
+  const name = el("ta").value.trim();
+  const from = parseInt(el("gfrom").value, 10);
+  const to   = parseInt(el("gto").value, 10);
+  const wk   = parseInt(el("week").value, 10);
+  if (!name) { alert("Enter who is recording."); return; }
+  if (!(from >= 1) || !(to >= from)) { alert("Check the group range."); return; }
+  if (!(wk >= 1)) { alert("Check the week number."); return; }
+  device = { ta: name, from: from, to: to };
+  write(K.device, device);
+  openWeek(wk);
+};
+
+el("wipe").onclick = () => {
+  if (!confirm("Erase the roster and every recorded session on this phone?")) return;
+  [K.roster, K.device, K.sessions].forEach(k => localStorage.removeItem(k));
+  roster = null; device = null; sessions = {}; week = null;
+  renderRosterState();
+  alert("Erased.");
+};
+
+function openWeek(wk) {
+  week = wk;
+  if (!sessions[week]) {
+    const groups = {};
+    for (let n = device.from; n <= device.to; n++) groups[n] = { students: [], scores: {} };
+    sessions[week] = { ta: device.ta, current: device.from, groups: groups };
+    write(K.sessions, sessions);
+  }
+  show("main");
+  renderAll();
+}
+
+/* ---------------- session ---------------- */
+
+function renderDots() {
+  const box = el("dots"); box.innerHTML = "";
+  groupNums().forEach(n => {
+    const d = document.createElement("div");
+    d.className = "dot" + (n === session().current ? " cur" : isComplete(session().groups[n]) ? " done" : "");
+    box.appendChild(d);
+  });
+}
+
+function renderSeats() {
+  const g = session().groups[session().current], box = el("seats");
+  box.innerHTML = "";
+  if (!g.students.length) {
+    const e = document.createElement("span");
+    e.className = "empty"; e.textContent = "Nobody added yet.";
+    box.appendChild(e);
+  }
+  g.students.forEach(id => {
+    const st = byId(id);
+    const chip = document.createElement("span");
+    chip.className = "seat";
+    chip.appendChild(document.createTextNode(st ? st.name : id));
+    const x = document.createElement("button");
+    x.className = "x"; x.textContent = "×";
+    x.setAttribute("aria-label", "Remove " + (st ? st.name : id));
+    x.onclick = () => { g.students = g.students.filter(s => s !== id); write(K.sessions, sessions); renderAll(); };
+    chip.appendChild(x);
+    box.appendChild(chip);
+  });
+  const add = document.createElement("button");
+  add.className = "add";
+  add.textContent = el("picker").classList.contains("hidden") ? "+ Add student" : "Done adding";
+  add.onclick = () => {
+    el("picker").classList.toggle("hidden");
+    if (!el("picker").classList.contains("hidden")) el("search").focus();
+    renderSeats();
+  };
+  box.appendChild(add);
+  el("seatcount").textContent = g.students.length + " assigned";
+}
+
+function renderNames() {
+  const q = el("search").value.trim().toLowerCase();
+  const taken = assignedIds();
+  const here = new Set(session().groups[session().current].students);
+  const list = students().filter(s => !q || s.name.toLowerCase().includes(q));
+  const box = el("names"); box.innerHTML = "";
+  if (!list.length) { box.innerHTML = '<div class="none">No match.</div>'; return; }
+  list.forEach(s => {
+    const b = document.createElement("button");
+    b.className = "name" + (here.has(s.id) ? " here" : taken.has(s.id) ? " taken" : "");
+    b.textContent = s.name;
+    b.onclick = () => {
+      const g = session().groups[session().current];
+      if (here.has(s.id)) g.students = g.students.filter(x => x !== s.id);
+      else g.students.push(s.id);
+      write(K.sessions, sessions);
+      renderAll();
+    };
+    box.appendChild(b);
+  });
+}
+
+function renderFactors() {
+  const g = session().groups[session().current], box = el("factors");
+  box.innerHTML = "";
+  FACTORS.forEach(f => {
+    const wrap = document.createElement("div"); wrap.className = "factor";
+    const lab = document.createElement("div"); lab.className = "flabel";
+    const n = document.createElement("span"); n.className = "fname"; n.textContent = f.name;
+    const h = document.createElement("span"); h.className = "fhint"; h.textContent = f.hint;
+    lab.appendChild(n); lab.appendChild(h); wrap.appendChild(lab);
+    const sc = document.createElement("div"); sc.className = "scale";
+    sc.style.gridTemplateColumns = "repeat(" + SCALE.length + ",1fr)";
+    SCALE.forEach(v => {
+      const b = document.createElement("button");
+      b.className = "sbtn"; b.textContent = v;
+      b.setAttribute("aria-pressed", String(g.scores[f.key] === v));
+      b.setAttribute("aria-label", f.name + ": " + v);
+      b.onclick = () => {
+        if (g.scores[f.key] === v) delete g.scores[f.key]; else g.scores[f.key] = v;
+        write(K.sessions, sessions); renderFactors(); renderDots();
+      };
+      sc.appendChild(b);
+    });
+    wrap.appendChild(sc); box.appendChild(wrap);
+  });
+}
+
+function renderAll() {
+  const s = session();
+  el("gval").textContent = s.current;
+  el("weeklab").textContent = "Week " + week;
+  el("wholab").textContent = device.ta + " · groups " + device.from + "–" + device.to;
+  el("prev").disabled = s.current <= device.from;
+  el("nextG").disabled = s.current >= device.to;
+  renderDots(); renderSeats(); renderNames(); renderFactors();
+}
+
+function step(delta) {
+  session().current += delta;
+  write(K.sessions, sessions);
+  el("picker").classList.add("hidden");
+  renderAll(); window.scrollTo(0, 0);
+}
+
+el("prev").onclick = () => step(-1);
+el("nextG").onclick = () => step(1);
+el("advance").onclick = () => {
+  if (session().current < device.to) step(1);
+  else openSummary();
+};
+el("toSummary").onclick = openSummary;
+el("toSetup").onclick = () => {
+  el("ta").value = device.ta;
+  el("gfrom").value = device.from;
+  el("gto").value = device.to;
+  el("week").value = week;
+  renderRosterState();
+  show("setup");
+};
+el("search").oninput = renderNames;
+
+/* ---------------- summary & export ---------------- */
+
+function payload() {
+  const s = session();
+  return {
+    course: roster.course || "HOFI",
+    week: week,
+    ta: s.ta,
+    device_exported: new Date().toISOString(),
+    groups: Object.keys(s.groups)
+      .map(Number).sort((a, b) => a - b)
+      .filter(n => s.groups[n].students.length || Object.keys(s.groups[n].scores).length)
+      .map(n => ({ group: n, students: s.groups[n].students, scores: s.groups[n].scores })),
+    absent: students().map(x => x.id).filter(id => !assignedIds().has(id))
+  };
+}
+
+function openSummary() {
+  const s = session();
+  const nums = groupNums();
+  const done = nums.filter(n => isComplete(s.groups[n]));
+  const present = assignedIds();
+
+  el("sumTitle").textContent = "Week " + week + " — " + s.ta;
+  el("sGroups").textContent = done.length + "/" + nums.length;
+  el("sPresent").textContent = present.size;
+  el("sAbsent").textContent = students().length - present.size;
+
+  const counts = {};
+  nums.forEach(n => s.groups[n].students.forEach(id => { counts[id] = (counts[id] || 0) + 1; }));
+  const dups = Object.keys(counts).filter(id => counts[id] > 1);
+  const dw = el("dupwarn");
+  dw.classList.toggle("hidden", !dups.length);
+  if (dups.length) {
+    dw.textContent = dups.length + " student(s) recorded in more than one group: " +
+      dups.map(id => (byId(id) || {}).name || id).join(", ") + ". Fix before exporting.";
+  }
+
+  const partial = nums.filter(n => !isComplete(s.groups[n]) &&
+    (s.groups[n].students.length || Object.keys(s.groups[n].scores).length));
+  const iw = el("incomplete");
+  iw.classList.toggle("hidden", !partial.length);
+  if (partial.length) iw.textContent = "Started but not finished: group " + partial.join(", ") + ".";
+
+  const abs = students().filter(x => !present.has(x.id));
+  const box = el("absentlist"); box.innerHTML = "";
+  abs.forEach(x => { const sp = document.createElement("span"); sp.textContent = x.name; box.appendChild(sp); });
+  if (!abs.length) { const sp = document.createElement("span"); sp.textContent = "everyone accounted for"; box.appendChild(sp); }
+
+  show("summary");
+}
+
+el("exportBtn").onclick = () => {
+  const data = payload();
+  const name = "hofi-w" + String(week).padStart(2, "0") + "-" +
+               device.ta.toLowerCase().replace(/[^a-z0-9]+/g, "") + ".json";
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+};
+
+el("back").onclick = () => { show("main"); renderAll(); };
+
+/* ---------------- boot ---------------- */
+
+renderRosterState();
+if (roster && device) {
+  const weeks = Object.keys(sessions).map(Number);
+  if (weeks.length) { week = Math.max.apply(null, weeks); show("main"); renderAll(); }
+  else { el("ta").value = device.ta; el("gfrom").value = device.from; el("gto").value = device.to; show("setup"); }
+} else {
+  show("setup");
+}
+</script>
+</body>
+</html>

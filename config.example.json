@@ -1,0 +1,8 @@
+{
+  "canvas_host": "reykjavik.instructure.com",
+  "canvas_course_id": null,
+  "course_label": "HOFI",
+
+  "_comment": "Copy this file to config.json and fill it in. config.json is gitignored. Prefer putting the token in the CANVAS_TOKEN environment variable rather than in the file; if you do put it here, canvas_token is read as a fallback.",
+  "canvas_token": null
+}
