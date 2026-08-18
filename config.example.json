@@ -1,8 +1,9 @@
 {
   "canvas_host": "reykjavik.instructure.com",
+  "_course_id_comment": "Either the numeric Canvas id from the course URL, or RU's SIS id such as \"DCS-T-101-HOFI:41057:20263\". These are different identifiers; the script accepts both. Run  fetch_roster.py courses  to see them side by side.",
   "canvas_course_id": null,
   "course_label": "HOFI",
 
-  "_comment": "Copy this file to config.json and fill it in. config.json is gitignored. Prefer putting the token in the CANVAS_TOKEN environment variable rather than in the file; if you do put it here, canvas_token is read as a fallback.",
+  "_comment": "Copy this file to config.json and fill it in. config.json is gitignored. Do NOT put the token here if you can avoid it: store it in the macOS Keychain instead, with  security add-generic-password -a \"$USER\" -s hofi-canvas -w  which the script reads automatically. canvas_token below is only a last-resort fallback.",
   "canvas_token": null
 }

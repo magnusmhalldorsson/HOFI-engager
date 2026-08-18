@@ -10,7 +10,7 @@
     --ground:#e9ecea; --surface:#fff; --surface-2:#f2f5f3;
     --ink:#16201d; --ink-soft:#5d6d68; --ink-faint:#94a29d;
     --rule:#d2dad6; --teal:#0e6e63; --teal-soft:#d6e8e5;
-    --done:#2f7d4f; --alert:#b4531b; --on-teal:#fff;
+    --done:#2f7d4f; --alert:#b4531b; --alert-soft:#f6e3d5; --on-teal:#fff;
     --shadow:0 1px 2px rgba(20,40,35,.08),0 4px 14px rgba(20,40,35,.06);
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -19,13 +19,13 @@
     --ground:#10161a; --surface:#1a2226; --surface-2:#222c31;
     --ink:#e6ecea; --ink-soft:#9fb0ab; --ink-faint:#6d7f7a;
     --rule:#2e3a3f; --teal:#4bbfae; --teal-soft:#1d3b39;
-    --done:#56b07a; --alert:#e08a4e; --on-teal:#10161a;
+    --done:#56b07a; --alert:#e08a4e; --alert-soft:#3a2a1c; --on-teal:#10161a;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);}}
   *{box-sizing:border-box}
   body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
        font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
   button{font:inherit;color:inherit;cursor:pointer}
-  button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
   .frame{max-width:27rem;margin:0 auto;min-height:100vh;background:var(--surface);
          box-shadow:var(--shadow);display:flex;flex-direction:column}
   .top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--rule);
@@ -33,6 +33,10 @@
   .top-row{display:flex;align-items:baseline;gap:.6rem}
   .course{font-weight:700;letter-spacing:-.01em}
   .who{margin-left:auto;font-size:.78rem;color:var(--ink-soft)}
+  .blockbar{margin-top:.35rem;font-size:.78rem;color:var(--ink-soft);display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
+  .tag{background:var(--surface-2);border:1px solid var(--rule);border-radius:5px;padding:.1rem .4rem;
+       font-size:.72rem;font-weight:700;letter-spacing:.04em}
+  .tag.cond{background:var(--teal-soft);border-color:var(--teal-soft);color:var(--ink)}
   .dots{display:flex;gap:3px;margin-top:.55rem}
   .dot{flex:1;height:4px;border-radius:2px;background:var(--rule)}
   .dot.done{background:var(--done)} .dot.cur{background:var(--teal)}
@@ -48,8 +52,11 @@
   .sec-title{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
   .sec-note{margin-left:auto;font-size:.75rem;color:var(--ink-faint);font-variant-numeric:tabular-nums}
   .seats{display:flex;flex-wrap:wrap;gap:.4rem}
-  .seat{display:inline-flex;align-items:center;gap:.4rem;background:var(--teal-soft);border-radius:999px;
-        padding:.45rem .5rem .45rem .85rem;font-size:.88rem}
+  .seat{display:inline-flex;align-items:center;gap:.35rem;background:var(--teal-soft);border-radius:999px;
+        padding:.4rem .45rem .4rem .8rem;font-size:.88rem}
+  .seat.concern{background:var(--alert-soft)}
+  .seat .flag{border:none;background:none;padding:0 .15rem;font-size:.95rem;line-height:1;opacity:.45}
+  .seat.concern .flag{opacity:1}
   .seat .x{border:none;background:none;padding:0 .2rem;color:var(--ink-soft);font-size:1.05rem;line-height:1}
   .add{border:1px dashed var(--rule);background:none;color:var(--teal);border-radius:999px;
        padding:.45rem 1rem;font-size:.88rem;font-weight:600}
@@ -57,19 +64,32 @@
   .picker{margin-top:.7rem;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
   .picker input{width:100%;border:none;border-bottom:1px solid var(--rule);padding:.7rem .85rem;
                 font-size:1rem;background:var(--surface-2);color:var(--ink)}
+  .pickerbar{display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+             padding:.5rem .85rem;background:var(--surface-2);border-bottom:1px solid var(--rule)}
+  .pickerbar:empty{display:none;padding:0;border-bottom:none}
+  .linkbtn{border:none;background:none;color:var(--teal);font-weight:700;font-size:.78rem;padding:0;flex:none}
   .names{max-height:14rem;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule)}
   .name{background:var(--surface);border:none;text-align:left;padding:.6rem;font-size:.82rem;line-height:1.25;min-height:3rem}
   .name.taken{color:var(--ink-faint);text-decoration:line-through}
   .name.here{background:var(--teal-soft);font-weight:600}
   .none{grid-column:1/-1;background:var(--surface);padding:1rem;text-align:center;color:var(--ink-faint);font-size:.85rem}
-  .factor+.factor{margin-top:.7rem}
+  .factor+.factor{margin-top:.85rem}
   .flabel{display:flex;align-items:baseline;gap:.4rem;margin-bottom:.3rem}
-  .fname{font-weight:600;font-size:.92rem}
+  .fname{font-weight:600;font-size:.92rem;background:none;border:none;padding:0;text-decoration:underline;
+         text-decoration-style:dotted;text-underline-offset:3px}
   .fhint{font-size:.74rem;color:var(--ink-faint)}
+  .anchors{background:var(--surface-2);border-radius:7px;padding:.55rem .7rem;margin-bottom:.4rem;font-size:.78rem;line-height:1.4}
+  .anchors dt{font-weight:700;margin-top:.35rem}
+  .anchors dt:first-child{margin-top:0}
+  .anchors dd{margin:0;color:var(--ink-soft)}
   .scale{display:grid;gap:.35rem}
   .sbtn{border:1px solid var(--rule);background:var(--surface-2);border-radius:7px;padding:.65rem .2rem;
         font-size:.8rem;font-weight:600;text-align:center}
   .sbtn[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--on-teal)}
+  .counter{display:flex;align-items:center;gap:.6rem}
+  .counter button{width:2.8rem;height:2.8rem;border-radius:8px;border:1px solid var(--rule);
+                  background:var(--surface-2);font-size:1.3rem;line-height:1}
+  .counter .cval{flex:1;text-align:center;font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums}
   .foot{margin-top:auto;padding:.9rem 1rem;padding-bottom:max(1.4rem,env(safe-area-inset-bottom));
         border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:.55rem;
         background:var(--surface);position:sticky;bottom:0}
@@ -86,6 +106,10 @@
         border-radius:8px;background:var(--surface-2);color:var(--ink);font:inherit}
   textarea{font-family:var(--mono);font-size:.75rem;min-height:7rem;resize:vertical}
   .row{display:flex;gap:.6rem}.row>*{flex:1}
+  .seg{display:grid;gap:.4rem;grid-auto-flow:column;grid-auto-columns:1fr}
+  .seg button{border:1px solid var(--rule);background:var(--surface-2);border-radius:8px;
+              padding:.7rem .3rem;font-size:.85rem;font-weight:600}
+  .seg button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--on-teal)}
   .stat-row{display:flex;gap:.6rem;margin-bottom:.9rem}
   .stat{flex:1;background:var(--surface-2);border-radius:8px;padding:.6rem;text-align:center}
   .stat b{display:block;font-size:1.5rem;font-variant-numeric:tabular-nums;line-height:1.1}
@@ -96,6 +120,11 @@
         font-size:.83rem;border-radius:0 6px 6px 0;margin-bottom:.9rem}
   .ok{background:var(--surface-2);border-left:3px solid var(--done);padding:.6rem .8rem;
       font-size:.83rem;border-radius:0 6px 6px 0}
+  .blocklist{display:grid;gap:.4rem;margin:.5rem 0 0}
+  .blockrow{display:flex;align-items:center;gap:.5rem;border:1px solid var(--rule);border-radius:8px;
+            padding:.55rem .7rem;background:var(--surface-2);font-size:.85rem;text-align:left;width:100%}
+  .blockrow .grow{flex:1}
+  .blockrow .cnt{font-size:.75rem;color:var(--ink-faint);font-variant-numeric:tabular-nums}
   .hidden{display:none}
   .note{font-size:.78rem;color:var(--ink-faint)}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -121,18 +150,45 @@
 
     <label for="ta">Who is recording?</label>
     <input type="text" id="ta" placeholder="Sara" autocomplete="off">
+    <p class="note">Used to label your export. Two TAs may cover the same groups — that is a deliberate
+       double-rating, not a mistake, and the merge step keeps both.</p>
+
+    <button class="next" id="setupDone" style="margin-top:1.2rem">Save</button>
+    <div class="minor" style="margin-top:.55rem">
+      <button id="toBlocksFromSetup">Back</button>
+      <button id="wipe">Erase everything</button>
+    </div>
+  </div>
+
+  <!-- ============ BLOCK CHOOSER ============ -->
+  <div id="blocks" class="panel hidden">
+    <h2>Which session?</h2>
+    <p class="sub">One record per Thinking Lab session: a week, a half-day, and which pedagogy ran.
+       Who was in the room is whoever gets tapped in on the next screen.</p>
+
+    <label for="bweek">Week</label>
+    <input type="number" id="bweek" min="1" max="12" value="1">
+
+    <label>Half-day</label>
+    <div class="seg" id="segHalf"></div>
+
+    <label>Pedagogy in this session</label>
+    <div class="seg" id="segCondition"></div>
+    <p class="note">Set from the week's allocation. Getting this wrong corrupts the main comparison,
+       so check it against the schedule rather than from memory.</p>
 
     <div class="row">
-      <div><label for="gfrom">First group</label><input type="number" id="gfrom" min="1" value="1"></div>
-      <div><label for="gto">Last group</label><input type="number" id="gto" min="1" value="15"></div>
+      <div><label for="bfrom">First group</label><input type="number" id="bfrom" min="1" value="1"></div>
+      <div><label for="bto">Last group</label><input type="number" id="bto" min="1" value="15"></div>
     </div>
 
-    <label for="week">Week</label>
-    <input type="number" id="week" min="1" max="12" value="1">
+    <button class="next" id="openBlock" style="margin-top:1.2rem">Start / resume this session</button>
 
-    <button class="next" id="startBtn" style="margin-top:1.2rem">Start recording</button>
-    <div class="minor" style="margin-top:.55rem">
-      <button id="wipe">Erase everything on this phone</button>
+    <div id="recent"></div>
+
+    <div class="minor" style="margin-top:1.2rem">
+      <button id="toSummary2">Upload</button>
+      <button id="toSetup2">Settings</button>
     </div>
   </div>
 
@@ -144,6 +200,7 @@
         <span class="note" id="weeklab"></span>
         <span class="who" id="wholab"></span>
       </div>
+      <div class="blockbar" id="blockbar"></div>
       <div class="dots" id="dots"></div>
     </div>
 
@@ -159,42 +216,47 @@
         <span class="sec-note" id="seatcount">0 assigned</span>
       </div>
       <div class="seats" id="seats"></div>
+      <p class="note" style="margin:.5rem 0 0">Everyone listed counts as present and taking part.
+         Tap <b>!</b> only to flag someone who took no part — the exception, not the rule.</p>
       <div class="picker hidden" id="picker">
         <input type="search" id="search" placeholder="Type a name…" autocomplete="off" aria-label="Search students">
+        <div class="pickerbar" id="pickerbar"></div>
         <div class="names" id="names"></div>
       </div>
     </section>
 
     <section>
-      <div class="sec-head"><span class="sec-title">Engagement</span></div>
+      <div class="sec-head"><span class="sec-title">This group</span></div>
       <div id="factors"></div>
     </section>
 
     <div class="foot">
       <button class="next" id="advance">Save &amp; next group</button>
       <div class="minor">
-        <button id="toSummary">Finish &amp; export</button>
-        <button id="toSetup">Settings</button>
+        <button id="toBlocks">Change session</button>
+        <button id="toSummary">Upload</button>
       </div>
     </div>
   </div>
 
   <!-- ============ SUMMARY ============ -->
   <div id="summary" class="panel hidden">
-    <h2 id="sumTitle"></h2>
-    <p class="sub">Export, then send the file to Magnús — mail, OneDrive, whatever is to hand.</p>
+    <h2>Upload</h2>
+    <p class="sub">Sends every session recorded on this phone. On a phone this opens the
+       share sheet — pick OneDrive, then the shared HOFI folder. On a computer it
+       downloads a file instead.</p>
     <div class="stat-row">
+      <div class="stat"><b id="sBlocks">0</b><span>sessions</span></div>
       <div class="stat"><b id="sGroups">0</b><span>groups done</span></div>
-      <div class="stat"><b id="sPresent">0</b><span>present</span></div>
-      <div class="stat"><b id="sAbsent">0</b><span>unassigned</span></div>
+      <div class="stat"><b id="sPartial">0</b><span>unfinished</span></div>
     </div>
     <div id="dupwarn" class="warn hidden"></div>
     <div id="incomplete" class="warn hidden"></div>
-    <button class="next" id="exportBtn">Export this week</button>
-    <p class="sec-title" style="margin:1.2rem 0 .4rem">Unassigned — treated as absent</p>
-    <div class="absent" id="absentlist"></div>
+    <button class="next" id="exportBtn">Upload everything</button>
+    <p class="sec-title" style="margin:1.2rem 0 .4rem">Sessions on this phone</p>
+    <div id="blocksummary"></div>
     <div class="minor" style="margin-top:1.2rem">
-      <button id="back">Back to session</button>
+      <button id="back">Back</button>
     </div>
   </div>
 
@@ -204,46 +266,107 @@
 "use strict";
 
 /* ---------------------------------------------------------------------------
-   CONFIGURATION — the extension point.
-   Add a factor here and it appears everywhere; earlier weeks simply carry no
+   MEASURES — the extension point.
+
+   Ratings carry behavioural anchors: each level says what the TA would see,
+   not how strongly they feel about the group. Anchors are deliberately written
+   so they can be observed in EITHER condition — nothing here refers to the
+   whiteboard, because an ordinary class does not have one, and a measure that
+   means different things in the two arms cannot compare them.
+
+   Add a measure here and it appears everywhere; earlier blocks simply carry no
    value for it, which the analysis step treats as "not recorded".
 --------------------------------------------------------------------------- */
-const FACTORS = [
-  { key:"participation", name:"Participation", hint:"took part in the discussion" },
-  { key:"preparation",   name:"Preparation",   hint:"arrived having done the reading" },
-  { key:"collaboration", name:"Collaboration", hint:"worked as a group, not in parallel" },
-  { key:"progress",      name:"Progress",      hint:"got somewhere with the problem" }
-];
 const SCALE = ["Below", "Expected", "Above"];
+
+const RATINGS = [
+  {
+    key: "engagement", name: "Engagement", hint: "involvement with the task",
+    anchors: {
+      "Below": "Someone is out of the task for long stretches. Work is received or repeated — restating the prompt, copying down. Stuck means stalled.",
+      "Expected": "Most members on task most of the time, producing something beyond what was given. More than one person contributing. Stuck means they try something.",
+      "Above": "Members build on each other — a suggestion is picked up, questioned or extended. The group sets its own next step when stuck."
+    }
+  },
+  {
+    key: "collaboration", name: "Collaboration", hint: "how the group works as a unit",
+    anchors: {
+      "Below": "Effectively one or two people; others spectate or work separately alongside. Ideas are not taken up. Disagreement is avoided or someone just gives way.",
+      "Expected": "Work is shared — more than one contributes materially, and they coordinate: passing the pen, checking before moving on.",
+      "Above": "The group actively includes — a quieter member is brought in or asked directly. Disagreement is settled on the merits, not by whoever is loudest."
+    }
+  }
+];
+
+/* How far the group got, read off their work rather than judged. */
+const PROGRESS = ["None", "Partial", "Complete", "Extended"];
+
+/* Liljedahl's "stop-thinking" questions — is this right? is this what you want?
+   A tally, not a rating: counts do not suffer halo. */
+const COUNTERS = [
+  { key: "stopThinking", name: "Stop-thinking questions",
+    hint: "“is this right?” — tally, not a judgement" }
+];
+
+const HALVES = [
+  { key: "AM", label: "Before lunch" },
+  { key: "PM", label: "After lunch" }
+];
+const CONDITIONS = [
+  { key: "TC", label: "Thinking Classroom" },
+  { key: "OC", label: "Ordinary class" }
+];
 /* ------------------------------------------------------------------------ */
 
-const K = { roster:"hofi.roster", device:"hofi.device", sessions:"hofi.sessions" };
+const K = { roster:"hofi.roster", device:"hofi.device", blocks:"hofi.blocks", draft:"hofi.draft" };
 const el = id => document.getElementById(id);
 const read = (k, fb) => { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch (e) { return fb; } };
 const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
-let roster  = read(K.roster, null);
-let device  = read(K.device, null);
-let sessions = read(K.sessions, {});
-let week = null;
+let roster = read(K.roster, null);
+let device = read(K.device, null);
+let blocks = read(K.blocks, {});          // blockId -> block record
+let draft  = read(K.draft, { week:1, half:"AM", condition:null, from:1, to:15 });
+let curId  = null;                         // block currently open
+let showAllNames = false;                  // picker filter override; reset when the block changes
 
 const students = () => (roster && roster.students) || [];
 const byId = id => students().find(s => s.id === id);
-const session = () => sessions[week];
-const groupNums = () => {
+const B = () => blocks[curId];
+const blockId = d => "w" + String(d.week).padStart(2,"0") + "-" + d.half;
+const blockLabel = b => "W" + b.week + " " + b.half + " · " + b.condition;
+
+const groupNums = b => {
   const out = [];
-  for (let n = device.from; n <= device.to; n++) out.push(n);
+  for (let n = b.from; n <= b.to; n++) out.push(n);
   return out;
 };
-const isComplete = g => g.students.length > 0 && FACTORS.every(f => g.scores[f.key] != null);
-const assignedIds = () => new Set(Object.values(session().groups).flatMap(g => g.students));
+const isComplete = g =>
+  g.students.length > 0 && RATINGS.every(r => g.scores[r.key] != null) && g.progress != null;
+const assignedIn = b => new Set(Object.values(b.groups).flatMap(g => g.students));
+
+/* Everyone this device has already recorded THIS WEEK, in a block other than
+   the current one -- i.e. the other half-day's population, if it has been
+   recorded here. There is no cross-device knowledge: if a second TA covers
+   the other half on a different phone, this returns empty and the picker
+   shows everyone, same as the first block of the week always does. */
+function recordedElsewhereThisWeek(b) {
+  const out = new Set();
+  Object.keys(blocks).forEach(id => {
+    if (id === curId) return;
+    const other = blocks[id];
+    if (other.week !== b.week) return;
+    Object.values(other.groups).forEach(g => g.students.forEach(sid => out.add(sid)));
+  });
+  return out;
+}
 
 function show(which) {
-  ["setup","main","summary"].forEach(id => el(id).classList.toggle("hidden", id !== which));
+  ["setup","blocks","main","summary"].forEach(id => el(id).classList.toggle("hidden", id !== which));
   window.scrollTo(0, 0);
 }
 
-/* ---------------- setup ---------------- */
+/* ---------------- roster & device ---------------- */
 
 function renderRosterState() {
   const box = el("rosterState");
@@ -286,53 +409,149 @@ el("usePaste").onclick = () => {
   if (acceptRoster(el("paste").value)) { el("paste").value = ""; alert("Roster loaded."); }
 };
 
-el("startBtn").onclick = () => {
-  if (!roster) { alert("Load a roster first."); return; }
+el("setupDone").onclick = () => {
   const name = el("ta").value.trim();
-  const from = parseInt(el("gfrom").value, 10);
-  const to   = parseInt(el("gto").value, 10);
-  const wk   = parseInt(el("week").value, 10);
   if (!name) { alert("Enter who is recording."); return; }
-  if (!(from >= 1) || !(to >= from)) { alert("Check the group range."); return; }
-  if (!(wk >= 1)) { alert("Check the week number."); return; }
-  device = { ta: name, from: from, to: to };
+  device = { ta: name };
   write(K.device, device);
-  openWeek(wk);
+  openChooser();
 };
 
 el("wipe").onclick = () => {
-  if (!confirm("Erase the roster and every recorded session on this phone?")) return;
-  [K.roster, K.device, K.sessions].forEach(k => localStorage.removeItem(k));
-  roster = null; device = null; sessions = {}; week = null;
+  if (!confirm("Erase the roster and every recorded block on this phone?")) return;
+  [K.roster, K.device, K.blocks, K.draft].forEach(k => localStorage.removeItem(k));
+  roster = null; device = null; blocks = {}; curId = null;
+  draft = { week:1, half:"AM", condition:null, from:1, to:15 };
   renderRosterState();
   alert("Erased.");
+  show("setup");
 };
 
-function openWeek(wk) {
-  week = wk;
-  if (!sessions[week]) {
-    const groups = {};
-    for (let n = device.from; n <= device.to; n++) groups[n] = { students: [], scores: {} };
-    sessions[week] = { ta: device.ta, current: device.from, groups: groups };
-    write(K.sessions, sessions);
+/* ---------------- block chooser ---------------- */
+
+function segment(host, options, current, onPick) {
+  host.innerHTML = "";
+  options.forEach(o => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = o.label;
+    b.setAttribute("aria-pressed", String(current === o.key));
+    b.onclick = () => onPick(o.key);
+    host.appendChild(b);
+  });
+}
+
+/* Pull the typed fields into the draft before anything re-renders. Without this,
+   tapping a segment button after typing a week number would redraw the inputs
+   from the stale draft and silently throw the typed value away. */
+function readChooserInputs() {
+  const wk = parseInt(el("bweek").value, 10);
+  const from = parseInt(el("bfrom").value, 10);
+  const to = parseInt(el("bto").value, 10);
+  if (wk >= 1) draft.week = wk;
+  if (from >= 1) draft.from = from;
+  if (to >= 1) draft.to = to;
+}
+
+function pick(field, key) {
+  readChooserInputs();
+  draft[field] = key;
+  write(K.draft, draft);
+  renderChooser();
+}
+
+function renderChooser() {
+  el("bweek").value = draft.week;
+  el("bfrom").value = draft.from;
+  el("bto").value = draft.to;
+  segment(el("segHalf"), HALVES, draft.half, k => pick("half", k));
+  segment(el("segCondition"), CONDITIONS, draft.condition, k => pick("condition", k));
+
+  const ids = Object.keys(blocks).sort().reverse();
+  const box = el("recent");
+  box.innerHTML = "";
+  if (!ids.length) return;
+  const h = document.createElement("p");
+  h.className = "sec-title"; h.style.margin = "1.4rem 0 .2rem";
+  h.textContent = "Already on this phone";
+  box.appendChild(h);
+  const list = document.createElement("div");
+  list.className = "blocklist";
+  ids.forEach(id => {
+    const b = blocks[id];
+    const done = groupNums(b).filter(n => b.groups[n] && isComplete(b.groups[n])).length;
+    const row = document.createElement("button");
+    row.type = "button"; row.className = "blockrow";
+    const lab = document.createElement("span");
+    lab.className = "grow"; lab.textContent = blockLabel(b);
+    const cnt = document.createElement("span");
+    cnt.className = "cnt"; cnt.textContent = done + "/" + groupNums(b).length;
+    row.appendChild(lab); row.appendChild(cnt);
+    row.onclick = () => { curId = id; showAllNames = false; show("main"); renderAll(); };
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+}
+
+function openChooser() {
+  if (!roster) { show("setup"); renderRosterState(); return; }
+  if (!device) { show("setup"); renderRosterState(); return; }
+  renderChooser();
+  show("blocks");
+}
+
+el("openBlock").onclick = () => {
+  const wk = parseInt(el("bweek").value, 10);
+  const from = parseInt(el("bfrom").value, 10);
+  const to = parseInt(el("bto").value, 10);
+  if (!(wk >= 1)) { alert("Check the week number."); return; }
+  if (!(from >= 1) || !(to >= from)) { alert("Check the group range."); return; }
+  if (!draft.condition) { alert("Pick which pedagogy ran in this session."); return; }
+  draft.week = wk; draft.from = from; draft.to = to;
+  write(K.draft, draft);
+
+  const id = blockId(draft);
+  if (!blocks[id]) {
+    blocks[id] = {
+      week: wk, half: draft.half, condition: draft.condition,
+      ta: device.ta, from: from, to: to, current: from, groups: {}
+    };
+  } else {
+    const b = blocks[id];
+    if (b.condition !== draft.condition &&
+        !confirm("This block is already recorded as " + b.condition + ". Change it to " + draft.condition + "?")) {
+      return;
+    }
+    b.condition = draft.condition;
+    b.from = Math.min(b.from, from); b.to = Math.max(b.to, to);
   }
+  const b = blocks[id];
+  groupNums(b).forEach(n => { if (!b.groups[n]) b.groups[n] = { students: [], flags: {}, scores: {}, progress: null, counts: {} }; });
+  write(K.blocks, blocks);
+  curId = id;
+  showAllNames = false;
   show("main");
   renderAll();
-}
+};
+
+el("toSetup2").onclick = () => { el("ta").value = (device && device.ta) || ""; renderRosterState(); show("setup"); };
+el("toBlocksFromSetup").onclick = openChooser;
+el("toSummary2").onclick = openSummary;
 
 /* ---------------- session ---------------- */
 
 function renderDots() {
-  const box = el("dots"); box.innerHTML = "";
-  groupNums().forEach(n => {
+  const b = B(), box = el("dots");
+  box.innerHTML = "";
+  groupNums(b).forEach(n => {
     const d = document.createElement("div");
-    d.className = "dot" + (n === session().current ? " cur" : isComplete(session().groups[n]) ? " done" : "");
+    d.className = "dot" + (n === b.current ? " cur" : isComplete(b.groups[n]) ? " done" : "");
     box.appendChild(d);
   });
 }
 
 function renderSeats() {
-  const g = session().groups[session().current], box = el("seats");
+  const b = B(), g = b.groups[b.current], box = el("seats");
   box.innerHTML = "";
   if (!g.students.length) {
     const e = document.createElement("span");
@@ -342,12 +561,28 @@ function renderSeats() {
   g.students.forEach(id => {
     const st = byId(id);
     const chip = document.createElement("span");
-    chip.className = "seat";
+    chip.className = "seat" + (g.flags[id] ? " concern" : "");
     chip.appendChild(document.createTextNode(st ? st.name : id));
+
+    const flag = document.createElement("button");
+    flag.className = "flag"; flag.textContent = "!";
+    flag.title = "Took no part";
+    flag.setAttribute("aria-label", (g.flags[id] ? "Clear" : "Flag") + " no participation for " + (st ? st.name : id));
+    flag.setAttribute("aria-pressed", String(!!g.flags[id]));
+    flag.onclick = () => {
+      if (g.flags[id]) delete g.flags[id]; else g.flags[id] = "no-part";
+      write(K.blocks, blocks); renderSeats();
+    };
+    chip.appendChild(flag);
+
     const x = document.createElement("button");
     x.className = "x"; x.textContent = "×";
     x.setAttribute("aria-label", "Remove " + (st ? st.name : id));
-    x.onclick = () => { g.students = g.students.filter(s => s !== id); write(K.sessions, sessions); renderAll(); };
+    x.onclick = () => {
+      g.students = g.students.filter(s => s !== id);
+      delete g.flags[id];
+      write(K.blocks, blocks); renderAll();
+    };
     chip.appendChild(x);
     box.appendChild(chip);
   });
@@ -360,70 +595,178 @@ function renderSeats() {
     renderSeats();
   };
   box.appendChild(add);
-  el("seatcount").textContent = g.students.length + " assigned";
+  const flagged = Object.keys(g.flags).length;
+  el("seatcount").textContent = g.students.length + " assigned" + (flagged ? " · " + flagged + " flagged" : "");
 }
 
 function renderNames() {
+  const b = B();
   const q = el("search").value.trim().toLowerCase();
-  const taken = assignedIds();
-  const here = new Set(session().groups[session().current].students);
-  const list = students().filter(s => !q || s.name.toLowerCase().includes(q));
+  const taken = assignedIn(b);
+  const here = new Set(b.groups[b.current].students);
+  const elsewhere = recordedElsewhereThisWeek(b);
+
+  const bar = el("pickerbar"); bar.innerHTML = "";
+  if (elsewhere.size) {
+    const info = document.createElement("span");
+    info.className = "note";
+    info.textContent = elsewhere.size + " recorded earlier this week";
+    const toggle = document.createElement("button");
+    toggle.type = "button"; toggle.className = "linkbtn";
+    toggle.textContent = showAllNames ? "Show remaining only" : "Show everyone";
+    toggle.onclick = () => { showAllNames = !showAllNames; renderNames(); };
+    bar.appendChild(info); bar.appendChild(toggle);
+  }
+
+  let list = students();
+  if (!q && !showAllNames) list = list.filter(s => here.has(s.id) || !elsewhere.has(s.id));
+  if (q) list = list.filter(s => s.name.toLowerCase().includes(q));
+
   const box = el("names"); box.innerHTML = "";
-  if (!list.length) { box.innerHTML = '<div class="none">No match.</div>'; return; }
+  if (!list.length) {
+    box.innerHTML = q
+      ? '<div class="none">No match.</div>'
+      : '<div class="none">Everyone left is recorded elsewhere this week — search, or "Show everyone".</div>';
+    return;
+  }
   list.forEach(s => {
-    const b = document.createElement("button");
-    b.className = "name" + (here.has(s.id) ? " here" : taken.has(s.id) ? " taken" : "");
-    b.textContent = s.name;
-    b.onclick = () => {
-      const g = session().groups[session().current];
-      if (here.has(s.id)) g.students = g.students.filter(x => x !== s.id);
+    const btn = document.createElement("button");
+    btn.className = "name" + (here.has(s.id) ? " here" : taken.has(s.id) ? " taken" : "");
+    btn.textContent = s.name;
+    btn.onclick = () => {
+      const g = b.groups[b.current];
+      if (here.has(s.id)) { g.students = g.students.filter(x => x !== s.id); delete g.flags[s.id]; }
       else g.students.push(s.id);
-      write(K.sessions, sessions);
+      write(K.blocks, blocks);
       renderAll();
     };
-    box.appendChild(b);
+    box.appendChild(btn);
   });
 }
 
 function renderFactors() {
-  const g = session().groups[session().current], box = el("factors");
+  const b = B(), g = b.groups[b.current], box = el("factors");
   box.innerHTML = "";
-  FACTORS.forEach(f => {
+
+  RATINGS.forEach(r => {
     const wrap = document.createElement("div"); wrap.className = "factor";
     const lab = document.createElement("div"); lab.className = "flabel";
-    const n = document.createElement("span"); n.className = "fname"; n.textContent = f.name;
-    const h = document.createElement("span"); h.className = "fhint"; h.textContent = f.hint;
-    lab.appendChild(n); lab.appendChild(h); wrap.appendChild(lab);
+
+    const nameBtn = document.createElement("button");
+    nameBtn.type = "button"; nameBtn.className = "fname"; nameBtn.textContent = r.name;
+    nameBtn.setAttribute("aria-expanded", "false");
+    nameBtn.title = "Show what each level means";
+
+    const hint = document.createElement("span");
+    hint.className = "fhint"; hint.textContent = r.hint;
+    lab.appendChild(nameBtn); lab.appendChild(hint); wrap.appendChild(lab);
+
+    const anchors = document.createElement("dl");
+    anchors.className = "anchors hidden";
+    SCALE.forEach(v => {
+      const dt = document.createElement("dt"); dt.textContent = v;
+      const dd = document.createElement("dd"); dd.textContent = r.anchors[v] || "";
+      anchors.appendChild(dt); anchors.appendChild(dd);
+    });
+    nameBtn.onclick = () => {
+      const open = anchors.classList.toggle("hidden");
+      nameBtn.setAttribute("aria-expanded", String(!open));
+    };
+    wrap.appendChild(anchors);
+
     const sc = document.createElement("div"); sc.className = "scale";
     sc.style.gridTemplateColumns = "repeat(" + SCALE.length + ",1fr)";
     SCALE.forEach(v => {
-      const b = document.createElement("button");
-      b.className = "sbtn"; b.textContent = v;
-      b.setAttribute("aria-pressed", String(g.scores[f.key] === v));
-      b.setAttribute("aria-label", f.name + ": " + v);
-      b.onclick = () => {
-        if (g.scores[f.key] === v) delete g.scores[f.key]; else g.scores[f.key] = v;
-        write(K.sessions, sessions); renderFactors(); renderDots();
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.className = "sbtn"; btn.textContent = v;
+      btn.setAttribute("aria-pressed", String(g.scores[r.key] === v));
+      btn.setAttribute("aria-label", r.name + ": " + v);
+      btn.onclick = () => {
+        if (g.scores[r.key] === v) delete g.scores[r.key]; else g.scores[r.key] = v;
+        write(K.blocks, blocks); renderFactors(); renderDots();
       };
-      sc.appendChild(b);
+      sc.appendChild(btn);
     });
-    wrap.appendChild(sc); box.appendChild(wrap);
+    wrap.appendChild(sc);
+    box.appendChild(wrap);
+  });
+
+  /* progress — read off their work, not judged */
+  const pw = document.createElement("div"); pw.className = "factor";
+  const plab = document.createElement("div"); plab.className = "flabel";
+  const pn = document.createElement("span"); pn.className = "fname"; pn.style.textDecoration = "none";
+  pn.textContent = "Progress";
+  const ph = document.createElement("span"); ph.className = "fhint"; ph.textContent = "how far they got";
+  plab.appendChild(pn); plab.appendChild(ph); pw.appendChild(plab);
+  const psc = document.createElement("div"); psc.className = "scale";
+  psc.style.gridTemplateColumns = "repeat(" + PROGRESS.length + ",1fr)";
+  PROGRESS.forEach(v => {
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "sbtn"; btn.textContent = v;
+    btn.setAttribute("aria-pressed", String(g.progress === v));
+    btn.setAttribute("aria-label", "Progress: " + v);
+    btn.onclick = () => {
+      g.progress = (g.progress === v) ? null : v;
+      write(K.blocks, blocks); renderFactors(); renderDots();
+    };
+    psc.appendChild(btn);
+  });
+  pw.appendChild(psc);
+  box.appendChild(pw);
+
+  /* counters */
+  COUNTERS.forEach(c => {
+    const wrap = document.createElement("div"); wrap.className = "factor";
+    const lab = document.createElement("div"); lab.className = "flabel";
+    const n = document.createElement("span"); n.className = "fname"; n.style.textDecoration = "none";
+    n.textContent = c.name;
+    const h = document.createElement("span"); h.className = "fhint"; h.textContent = c.hint;
+    lab.appendChild(n); lab.appendChild(h); wrap.appendChild(lab);
+
+    const row = document.createElement("div"); row.className = "counter";
+    const cur = g.counts[c.key] || 0;
+    const minus = document.createElement("button");
+    minus.type = "button"; minus.textContent = "−";
+    minus.setAttribute("aria-label", "Decrease " + c.name);
+    minus.disabled = cur <= 0;
+    minus.onclick = () => {
+      g.counts[c.key] = Math.max(0, (g.counts[c.key] || 0) - 1);
+      write(K.blocks, blocks); renderFactors();
+    };
+    const val = document.createElement("div"); val.className = "cval"; val.textContent = String(cur);
+    const plus = document.createElement("button");
+    plus.type = "button"; plus.textContent = "+";
+    plus.setAttribute("aria-label", "Increase " + c.name);
+    plus.onclick = () => {
+      g.counts[c.key] = (g.counts[c.key] || 0) + 1;
+      write(K.blocks, blocks); renderFactors();
+    };
+    row.appendChild(minus); row.appendChild(val); row.appendChild(plus);
+    wrap.appendChild(row);
+    box.appendChild(wrap);
   });
 }
 
 function renderAll() {
-  const s = session();
-  el("gval").textContent = s.current;
-  el("weeklab").textContent = "Week " + week;
-  el("wholab").textContent = device.ta + " · groups " + device.from + "–" + device.to;
-  el("prev").disabled = s.current <= device.from;
-  el("nextG").disabled = s.current >= device.to;
+  const b = B();
+  el("gval").textContent = b.current;
+  el("weeklab").textContent = "Week " + b.week;
+  el("wholab").textContent = b.ta;
+  const bar = el("blockbar"); bar.innerHTML = "";
+  [[b.half, "tag"], [b.condition, "tag cond"]].forEach(([t, cls]) => {
+    const s = document.createElement("span"); s.className = cls; s.textContent = t; bar.appendChild(s);
+  });
+  const rng = document.createElement("span");
+  rng.textContent = "groups " + b.from + "–" + b.to;
+  bar.appendChild(rng);
+  el("prev").disabled = b.current <= b.from;
+  el("nextG").disabled = b.current >= b.to;
   renderDots(); renderSeats(); renderNames(); renderFactors();
 }
 
 function step(delta) {
-  session().current += delta;
-  write(K.sessions, sessions);
+  B().current += delta;
+  write(K.blocks, blocks);
   el("picker").classList.add("hidden");
   renderAll(); window.scrollTo(0, 0);
 }
@@ -431,96 +774,151 @@ function step(delta) {
 el("prev").onclick = () => step(-1);
 el("nextG").onclick = () => step(1);
 el("advance").onclick = () => {
-  if (session().current < device.to) step(1);
-  else openSummary();
+  const b = B();
+  if (b.current < b.to) step(1); else openSummary();
 };
+el("toBlocks").onclick = openChooser;
 el("toSummary").onclick = openSummary;
-el("toSetup").onclick = () => {
-  el("ta").value = device.ta;
-  el("gfrom").value = device.from;
-  el("gto").value = device.to;
-  el("week").value = week;
-  renderRosterState();
-  show("setup");
-};
 el("search").oninput = renderNames;
 
 /* ---------------- summary & export ---------------- */
 
 function payload() {
-  const s = session();
   return {
-    course: roster.course || "HOFI",
-    week: week,
-    ta: s.ta,
-    device_exported: new Date().toISOString(),
-    groups: Object.keys(s.groups)
-      .map(Number).sort((a, b) => a - b)
-      .filter(n => s.groups[n].students.length || Object.keys(s.groups[n].scores).length)
-      .map(n => ({ group: n, students: s.groups[n].students, scores: s.groups[n].scores })),
-    absent: students().map(x => x.id).filter(id => !assignedIds().has(id))
+    course: (roster && roster.course) || "HOFI",
+    ta: device.ta,
+    schema: 2,
+    exported: new Date().toISOString(),
+    blocks: Object.keys(blocks).sort().map(id => {
+      const b = blocks[id];
+      const present = assignedIn(b);
+      return {
+        block_id: id,
+        week: b.week, half: b.half, condition: b.condition,
+        ta: b.ta, groups_covered: [b.from, b.to],
+        groups: groupNums(b)
+          .filter(n => b.groups[n] &&
+            (b.groups[n].students.length || Object.keys(b.groups[n].scores).length))
+          .map(n => ({
+            group: n,
+            students: b.groups[n].students,
+            no_part: Object.keys(b.groups[n].flags),
+            scores: b.groups[n].scores,
+            progress: b.groups[n].progress,
+            counts: b.groups[n].counts
+          })),
+        not_seen: students().map(s => s.id).filter(id => !present.has(id))
+      };
+    })
   };
 }
 
+function problems() {
+  const dups = [], partial = [];
+  Object.keys(blocks).sort().forEach(id => {
+    const b = blocks[id];
+    const counts = {};
+    groupNums(b).forEach(n => (b.groups[n] ? b.groups[n].students : [])
+      .forEach(sid => { counts[sid] = (counts[sid] || 0) + 1; }));
+    const d = Object.keys(counts).filter(sid => counts[sid] > 1);
+    if (d.length) dups.push({ id: id, label: blockLabel(b), names: d.map(sid => (byId(sid) || {}).name || sid) });
+    const p = groupNums(b).filter(n => b.groups[n] && !isComplete(b.groups[n]) &&
+      (b.groups[n].students.length || Object.keys(b.groups[n].scores).length));
+    if (p.length) partial.push({ label: blockLabel(b), groups: p });
+  });
+  return { dups: dups, partial: partial };
+}
+
 function openSummary() {
-  const s = session();
-  const nums = groupNums();
-  const done = nums.filter(n => isComplete(s.groups[n]));
-  const present = assignedIds();
+  const ids = Object.keys(blocks);
+  let done = 0;
+  ids.forEach(id => { done += groupNums(blocks[id]).filter(n => blocks[id].groups[n] && isComplete(blocks[id].groups[n])).length; });
+  const pr = problems();
 
-  el("sumTitle").textContent = "Week " + week + " — " + s.ta;
-  el("sGroups").textContent = done.length + "/" + nums.length;
-  el("sPresent").textContent = present.size;
-  el("sAbsent").textContent = students().length - present.size;
+  el("sBlocks").textContent = ids.length;
+  el("sGroups").textContent = done;
+  el("sPartial").textContent = pr.partial.reduce((a, p) => a + p.groups.length, 0);
 
-  const counts = {};
-  nums.forEach(n => s.groups[n].students.forEach(id => { counts[id] = (counts[id] || 0) + 1; }));
-  const dups = Object.keys(counts).filter(id => counts[id] > 1);
   const dw = el("dupwarn");
-  dw.classList.toggle("hidden", !dups.length);
-  if (dups.length) {
-    dw.textContent = dups.length + " student(s) recorded in more than one group: " +
-      dups.map(id => (byId(id) || {}).name || id).join(", ") + ". Fix before exporting.";
+  dw.classList.toggle("hidden", !pr.dups.length);
+  if (pr.dups.length) {
+    dw.textContent = "Same student in two groups within one session — fix before uploading: " +
+      pr.dups.map(d => d.label + " (" + d.names.join(", ") + ")").join("; ") + ".";
   }
 
-  const partial = nums.filter(n => !isComplete(s.groups[n]) &&
-    (s.groups[n].students.length || Object.keys(s.groups[n].scores).length));
   const iw = el("incomplete");
-  iw.classList.toggle("hidden", !partial.length);
-  if (partial.length) iw.textContent = "Started but not finished: group " + partial.join(", ") + ".";
+  iw.classList.toggle("hidden", !pr.partial.length);
+  if (pr.partial.length) {
+    iw.textContent = "Started but not finished: " +
+      pr.partial.map(p => p.label + " group " + p.groups.join(", ")).join("; ") + ".";
+  }
 
-  const abs = students().filter(x => !present.has(x.id));
-  const box = el("absentlist"); box.innerHTML = "";
-  abs.forEach(x => { const sp = document.createElement("span"); sp.textContent = x.name; box.appendChild(sp); });
-  if (!abs.length) { const sp = document.createElement("span"); sp.textContent = "everyone accounted for"; box.appendChild(sp); }
+  const box = el("blocksummary"); box.innerHTML = "";
+  if (!ids.length) {
+    const e = document.createElement("p");
+    e.className = "note"; e.textContent = "Nothing recorded yet.";
+    box.appendChild(e);
+  }
+  const list = document.createElement("div"); list.className = "blocklist";
+  ids.sort().forEach(id => {
+    const b = blocks[id];
+    const n = groupNums(b).filter(x => b.groups[x] && isComplete(b.groups[x])).length;
+    const row = document.createElement("div"); row.className = "blockrow";
+    const lab = document.createElement("span"); lab.className = "grow"; lab.textContent = blockLabel(b);
+    const cnt = document.createElement("span"); cnt.className = "cnt";
+    cnt.textContent = n + "/" + groupNums(b).length;
+    row.appendChild(lab); row.appendChild(cnt);
+    list.appendChild(row);
+  });
+  box.appendChild(list);
 
   show("summary");
 }
 
-el("exportBtn").onclick = () => {
-  const data = payload();
-  const name = "hofi-w" + String(week).padStart(2, "0") + "-" +
-               device.ta.toLowerCase().replace(/[^a-z0-9]+/g, "") + ".json";
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+function downloadFallback(json, name) {
+  const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+el("exportBtn").onclick = async () => {
+  if (!Object.keys(blocks).length) { alert("Nothing to export yet."); return; }
+  const data = payload();
+  const weeks = Object.values(blocks).map(b => b.week);
+  const tag = weeks.length === 1 || Math.min.apply(null, weeks) === Math.max.apply(null, weeks)
+    ? "w" + String(weeks[0]).padStart(2, "0")
+    : "w" + String(Math.min.apply(null, weeks)).padStart(2, "0") +
+      "-" + String(Math.max.apply(null, weeks)).padStart(2, "0");
+  const name = "hofi-" + tag + "-" + device.ta.toLowerCase().replace(/[^a-z0-9]+/g, "") + ".json";
+  const json = JSON.stringify(data, null, 2);
+
+  // On a phone, hand the file to the OS share sheet -- the TA picks OneDrive,
+  // then the shared HOFI folder, in one flow rather than downloading and then
+  // hunting for the file afterwards. Not every browser can share files (most
+  // desktop browsers can't), so this is a progressive enhancement over the
+  // plain download, not a replacement for it.
+  try {
+    const file = new File([json], name, { type: "application/json" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: name });
+      return;
+    }
+  } catch (err) {
+    if (err && err.name === "AbortError") return;   // TA cancelled the share sheet
+    // Any other failure (unsupported target, etc.) -- fall through to download.
+  }
+  downloadFallback(json, name);
 };
 
-el("back").onclick = () => { show("main"); renderAll(); };
+el("back").onclick = () => { if (curId) { show("main"); renderAll(); } else openChooser(); };
 
 /* ---------------- boot ---------------- */
 
 renderRosterState();
-if (roster && device) {
-  const weeks = Object.keys(sessions).map(Number);
-  if (weeks.length) { week = Math.max.apply(null, weeks); show("main"); renderAll(); }
-  else { el("ta").value = device.ta; el("gfrom").value = device.from; el("gto").value = device.to; show("setup"); }
-} else {
-  show("setup");
-}
+if (roster && device) openChooser(); else show("setup");
 </script>
 </body>
 </html>
