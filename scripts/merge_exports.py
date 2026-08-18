@@ -83,7 +83,7 @@ DEFAULT_EXPORTS_DIR = (
     / "HOFI26" / "Uploads"
 )
 
-RATING_KEYS = ["engagement", "collaboration"]
+RATING_KEYS = ["engagement", "collaboration", "stopThinking"]
 
 
 def load_json(path):
@@ -112,7 +112,7 @@ def pick_authoritative(files):
         data = load_json(path)
         for field in ("ta", "exported", "blocks"):
             if field not in data:
-                sys.exit("{}: missing '{}' -- not a v2 export?".format(path, field))
+                sys.exit("{}: missing '{}' -- not a valid export?".format(path, field))
         by_ta[data["ta"]].append((data["exported"], path, data))
 
     chosen = {}
@@ -147,7 +147,7 @@ def pick_authoritative(files):
 
 def merge(chosen, roster):
     """Combine the authoritative per-TA data into one record per block_id."""
-    by_block = defaultdict(lambda: {"week": None, "half": None,
+    by_block = defaultdict(lambda: {"week": None, "half": None, "cohort_group": None,
                                      "conditions": {}, "groups": defaultdict(list)})
 
     for ta, entry in chosen.items():
@@ -155,6 +155,10 @@ def merge(chosen, roster):
             rec = by_block[b["block_id"]]
             rec["week"] = b["week"]
             rec["half"] = b["half"]
+            # cohort_group (Group 1/2 within a TC session) is baked into
+            # block_id itself, so every TA recording this block_id necessarily
+            # agrees on it -- nothing to reconcile, unlike condition below.
+            rec["cohort_group"] = b.get("cohort_group")
             rec["conditions"][ta] = b["condition"]
             for g in b["groups"]:
                 rec["groups"][g["group"]].append({
@@ -163,7 +167,6 @@ def merge(chosen, roster):
                     "no_part": g.get("no_part", []),
                     "scores": g.get("scores", {}),
                     "progress": g.get("progress"),
-                    "counts": g.get("counts", {}),
                 })
 
     blocks_out = []
@@ -238,6 +241,7 @@ def merge(chosen, roster):
 
         blocks_out.append({
             "block_id": block_id, "week": rec["week"], "half": rec["half"],
+            "cohort_group": rec["cohort_group"],
             "condition": condition, "raters": sorted(rec["conditions"]),
             "groups": groups_out,
             "present": sorted(present), "not_seen": not_seen,
@@ -264,31 +268,33 @@ def write_outputs(blocks, agreement, issues, chosen, roster, warnings, out_dir):
 
     with open(out_dir / "groups.csv", "w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["week", "half", "condition", "group", "ta",
-                    "engagement", "collaboration", "progress", "stop_thinking",
+        w.writerow(["week", "half", "condition", "cohort_group", "group", "ta",
+                    "engagement", "collaboration", "stop_thinking", "progress",
                     "n_students", "n_flagged_no_part"])
         for b in blocks:
             for g in b["groups"]:
                 for r in g["ratings"]:
                     w.writerow([
-                        b["week"], b["half"], b["condition"], g["group"], r["ta"],
+                        b["week"], b["half"], b["condition"], b["cohort_group"] or "",
+                        g["group"], r["ta"],
                         r["scores"].get("engagement", ""),
                         r["scores"].get("collaboration", ""),
+                        r["scores"].get("stopThinking", ""),
                         r["progress"] or "",
-                        r["counts"].get("stopThinking", ""),
                         len(r["students"]), len(r["no_part"]),
                     ])
 
     with open(out_dir / "membership.csv", "w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["week", "half", "condition", "group", "ta",
+        w.writerow(["week", "half", "condition", "cohort_group", "group", "ta",
                     "student_id", "student_name", "no_part"])
         for b in blocks:
             for g in b["groups"]:
                 for r in g["ratings"]:
                     for sid in r["students"]:
                         w.writerow([
-                            b["week"], b["half"], b["condition"], g["group"], r["ta"],
+                            b["week"], b["half"], b["condition"], b["cohort_group"] or "",
+                            g["group"], r["ta"],
                             sid, roster.get(sid, ""), sid in r["no_part"],
                         ])
 

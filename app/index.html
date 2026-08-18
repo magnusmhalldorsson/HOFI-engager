@@ -38,7 +38,7 @@
        font-size:.72rem;font-weight:700;letter-spacing:.04em}
   .tag.cond{background:var(--teal-soft);border-color:var(--teal-soft);color:var(--ink)}
   .dots{display:flex;gap:3px;margin-top:.55rem}
-  .dot{flex:1;height:4px;border-radius:2px;background:var(--rule)}
+  .dot{flex:1;height:8px;padding:0;border:none;border-radius:2px;background:var(--rule);cursor:pointer}
   .dot.done{background:var(--done)} .dot.cur{background:var(--teal)}
   .stepper{display:flex;align-items:center;gap:.75rem;padding:1rem 1rem .4rem}
   .step-btn{width:3rem;height:3rem;border-radius:50%;border:1px solid var(--rule);
@@ -86,10 +86,9 @@
   .sbtn{border:1px solid var(--rule);background:var(--surface-2);border-radius:7px;padding:.65rem .2rem;
         font-size:.8rem;font-weight:600;text-align:center}
   .sbtn[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--on-teal)}
-  .counter{display:flex;align-items:center;gap:.6rem}
-  .counter button{width:2.8rem;height:2.8rem;border-radius:8px;border:1px solid var(--rule);
-                  background:var(--surface-2);font-size:1.3rem;line-height:1}
-  .counter .cval{flex:1;text-align:center;font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .progresslab{font-size:.72rem;color:var(--ink-faint);margin-top:.35rem;font-variant-numeric:tabular-nums}
+  .done-badge{display:inline-grid;place-items:center;width:1.3rem;height:1.3rem;border-radius:50%;
+              background:var(--done);color:var(--on-teal);font-size:.78rem;margin-left:.4rem;vertical-align:middle}
   .foot{margin-top:auto;padding:.9rem 1rem;padding-bottom:max(1.4rem,env(safe-area-inset-bottom));
         border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:.55rem;
         background:var(--surface);position:sticky;bottom:0}
@@ -177,6 +176,14 @@
     <p class="note">Set from the week's allocation. Getting this wrong corrupts the main comparison,
        so check it against the schedule rather than from memory.</p>
 
+    <div id="groupWrap" class="hidden">
+      <label>Which cohort group is this?</label>
+      <div class="seg" id="segGroup"></div>
+      <p class="note">Group 1 does Thinking Lab first, then Skill Lab. Group 2 does Skill Lab first,
+         then Thinking Lab. Not the numbered table-groups below — the room-swap pairing. In
+         Ordinary class everyone is together, so this does not apply.</p>
+    </div>
+
     <div class="row">
       <div><label for="bfrom">First group</label><input type="number" id="bfrom" min="1" value="1"></div>
       <div><label for="bto">Last group</label><input type="number" id="bto" min="1" value="15"></div>
@@ -202,11 +209,12 @@
       </div>
       <div class="blockbar" id="blockbar"></div>
       <div class="dots" id="dots"></div>
+      <div class="progresslab" id="progresslab"></div>
     </div>
 
     <div class="stepper">
       <button class="step-btn" id="prev" aria-label="Previous group">&lsaquo;</button>
-      <div class="gnum"><div class="lab">Group</div><div class="val" id="gval">1</div></div>
+      <div class="gnum"><div class="lab">Group</div><div class="val"><span id="gval">1</span><span id="gdone" class="done-badge hidden" aria-label="This group is fully entered">&check;</span></div></div>
       <button class="step-btn" id="nextG" aria-label="Next group">&rsaquo;</button>
     </div>
 
@@ -295,18 +303,22 @@ const RATINGS = [
       "Expected": "Work is shared — more than one contributes materially, and they coordinate: passing the pen, checking before moving on.",
       "Above": "The group actively includes — a quieter member is brought in or asked directly. Disagreement is settled on the merits, not by whoever is loudest."
     }
+  },
+  {
+    /* Liljedahl's "stop-thinking" questions -- is this right? is this what you
+       want? A count proved impractical to keep reliably mid-session, so this
+       is rated like the other two rather than tallied. */
+    key: "stopThinking", name: "Stop-thinking questions", hint: "asking to be told, rather than checking it themselves",
+    anchors: {
+      "Below": "Hardly any stop-thinking questions (“is this right?”, “is this what you want?”) — the group checks its own thinking rather than asking to be told.",
+      "Expected": "A normal mix — some checking in, alongside the group working things out on their own.",
+      "Above": "Frequently asking to be told whether they're right, rather than working it out themselves."
+    }
   }
 ];
 
 /* How far the group got, read off their work rather than judged. */
 const PROGRESS = ["None", "Partial", "Complete", "Extended"];
-
-/* Liljedahl's "stop-thinking" questions — is this right? is this what you want?
-   A tally, not a rating: counts do not suffer halo. */
-const COUNTERS = [
-  { key: "stopThinking", name: "Stop-thinking questions",
-    hint: "“is this right?” — tally, not a judgement" }
-];
 
 const HALVES = [
   { key: "AM", label: "Before lunch" },
@@ -315,6 +327,13 @@ const HALVES = [
 const CONDITIONS = [
   { key: "TC", label: "Thinking Classroom" },
   { key: "OC", label: "Ordinary class" }
+];
+/* The room-swap pairing within a TC session -- NOT the numbered table-groups
+   (1..15) TAs step through below. Only meaningful when condition is TC:
+   Ordinary class runs with everyone together, so it does not apply. */
+const COHORT_GROUPS = [
+  { key: "1", label: "Group 1" },
+  { key: "2", label: "Group 2" }
 ];
 /* ------------------------------------------------------------------------ */
 
@@ -326,15 +345,20 @@ const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 let roster = read(K.roster, null);
 let device = read(K.device, null);
 let blocks = read(K.blocks, {});          // blockId -> block record
-let draft  = read(K.draft, { week:1, half:"AM", condition:null, from:1, to:15 });
+let draft  = read(K.draft, { week:1, half:"AM", condition:null, group:null, from:1, to:15 });
 let curId  = null;                         // block currently open
 let showAllNames = false;                  // picker filter override; reset when the block changes
 
 const students = () => (roster && roster.students) || [];
 const byId = id => students().find(s => s.id === id);
 const B = () => blocks[curId];
-const blockId = d => "w" + String(d.week).padStart(2,"0") + "-" + d.half;
-const blockLabel = b => "W" + b.week + " " + b.half + " · " + b.condition;
+/* A TC session pairs two blocks (Group 1 / Group 2, the room-swap halves) in
+   the same week+half; the group suffix keeps them as separate records. An OC
+   session has no pairing, so no suffix -- everyone is one block. */
+const blockId = d => "w" + String(d.week).padStart(2,"0") + "-" + d.half +
+                      (d.condition === "TC" && d.group ? "-G" + d.group : "");
+const blockLabel = b => "W" + b.week + " " + b.half + " · " + b.condition +
+                         (b.group ? " · Group " + b.group : "");
 
 const groupNums = b => {
   const out = [];
@@ -345,17 +369,22 @@ const isComplete = g =>
   g.students.length > 0 && RATINGS.every(r => g.scores[r.key] != null) && g.progress != null;
 const assignedIn = b => new Set(Object.values(b.groups).flatMap(g => g.students));
 
-/* Everyone this device has already recorded THIS WEEK, in a block other than
-   the current one -- i.e. the other half-day's population, if it has been
-   recorded here. There is no cross-device knowledge: if a second TA covers
-   the other half on a different phone, this returns empty and the picker
-   shows everyone, same as the first block of the week always does. */
-function recordedElsewhereThisWeek(b) {
+/* Everyone already recorded in this TC session's PAIRED block -- the other
+   cohort group, same week and half-day. Group 1 and Group 2 between them
+   cover the whole Thinking-Lab population, so once one is recorded the other
+   is mostly "whoever's left". Ordinary class has no pairing -- everyone is
+   together in one block -- so this returns empty and the picker always shows
+   the full roster there, same as it does for the very first block recorded.
+   There is no cross-device knowledge: a second TA covering the paired group
+   on a different phone won't be seen, and the picker just shows everyone. */
+function recordedInPairedBlock(b) {
   const out = new Set();
+  if (b.condition !== "TC" || !b.group) return out;
   Object.keys(blocks).forEach(id => {
     if (id === curId) return;
     const other = blocks[id];
-    if (other.week !== b.week) return;
+    if (other.week !== b.week || other.half !== b.half || other.condition !== "TC") return;
+    if (other.group === b.group) return;
     Object.values(other.groups).forEach(g => g.students.forEach(sid => out.add(sid)));
   });
   return out;
@@ -421,7 +450,7 @@ el("wipe").onclick = () => {
   if (!confirm("Erase the roster and every recorded block on this phone?")) return;
   [K.roster, K.device, K.blocks, K.draft].forEach(k => localStorage.removeItem(k));
   roster = null; device = null; blocks = {}; curId = null;
-  draft = { week:1, half:"AM", condition:null, from:1, to:15 };
+  draft = { week:1, half:"AM", condition:null, group:null, from:1, to:15 };
   renderRosterState();
   alert("Erased.");
   show("setup");
@@ -465,7 +494,17 @@ function renderChooser() {
   el("bfrom").value = draft.from;
   el("bto").value = draft.to;
   segment(el("segHalf"), HALVES, draft.half, k => pick("half", k));
-  segment(el("segCondition"), CONDITIONS, draft.condition, k => pick("condition", k));
+  segment(el("segCondition"), CONDITIONS, draft.condition, k => {
+    readChooserInputs();
+    if (k !== draft.condition) draft.group = null;   // force an explicit re-pick, never carry a stale one
+    draft.condition = k;
+    write(K.draft, draft);
+    renderChooser();
+  });
+
+  const showGroup = draft.condition === "TC";
+  el("groupWrap").classList.toggle("hidden", !showGroup);
+  if (showGroup) segment(el("segGroup"), COHORT_GROUPS, draft.group, k => pick("group", k));
 
   const ids = Object.keys(blocks).sort().reverse();
   const box = el("recent");
@@ -507,13 +546,17 @@ el("openBlock").onclick = () => {
   if (!(wk >= 1)) { alert("Check the week number."); return; }
   if (!(from >= 1) || !(to >= from)) { alert("Check the group range."); return; }
   if (!draft.condition) { alert("Pick which pedagogy ran in this session."); return; }
+  if (draft.condition === "TC" && !draft.group) {
+    alert("Pick which cohort group this is — Group 1 or Group 2."); return;
+  }
   draft.week = wk; draft.from = from; draft.to = to;
   write(K.draft, draft);
 
+  const group = draft.condition === "TC" ? draft.group : null;
   const id = blockId(draft);
   if (!blocks[id]) {
     blocks[id] = {
-      week: wk, half: draft.half, condition: draft.condition,
+      week: wk, half: draft.half, condition: draft.condition, group: group,
       ta: device.ta, from: from, to: to, current: from, groups: {}
     };
   } else {
@@ -523,10 +566,11 @@ el("openBlock").onclick = () => {
       return;
     }
     b.condition = draft.condition;
+    b.group = group;
     b.from = Math.min(b.from, from); b.to = Math.max(b.to, to);
   }
   const b = blocks[id];
-  groupNums(b).forEach(n => { if (!b.groups[n]) b.groups[n] = { students: [], flags: {}, scores: {}, progress: null, counts: {} }; });
+  groupNums(b).forEach(n => { if (!b.groups[n]) b.groups[n] = { students: [], flags: {}, scores: {}, progress: null }; });
   write(K.blocks, blocks);
   curId = id;
   showAllNames = false;
@@ -543,11 +587,21 @@ el("toSummary2").onclick = openSummary;
 function renderDots() {
   const b = B(), box = el("dots");
   box.innerHTML = "";
-  groupNums(b).forEach(n => {
-    const d = document.createElement("div");
-    d.className = "dot" + (n === b.current ? " cur" : isComplete(b.groups[n]) ? " done" : "");
+  let doneCount = 0;
+  const nums = groupNums(b);
+  nums.forEach(n => {
+    const done = isComplete(b.groups[n]);
+    if (done) doneCount++;
+    const d = document.createElement("button");
+    d.type = "button";
+    d.className = "dot" + (n === b.current ? " cur" : done ? " done" : "");
+    d.setAttribute("aria-label", "Group " + n + (done ? ", entered" : ", not yet entered") +
+      (n === b.current ? " — current" : ""));
+    d.onclick = () => { if (n !== b.current) { b.current = n; write(K.blocks, blocks); renderAll(); } };
     box.appendChild(d);
   });
+  el("progresslab").textContent = doneCount + " of " + nums.length + " groups entered";
+  el("gdone").classList.toggle("hidden", !isComplete(b.groups[b.current]));
 }
 
 function renderSeats() {
@@ -604,13 +658,13 @@ function renderNames() {
   const q = el("search").value.trim().toLowerCase();
   const taken = assignedIn(b);
   const here = new Set(b.groups[b.current].students);
-  const elsewhere = recordedElsewhereThisWeek(b);
+  const elsewhere = recordedInPairedBlock(b);
 
   const bar = el("pickerbar"); bar.innerHTML = "";
   if (elsewhere.size) {
     const info = document.createElement("span");
     info.className = "note";
-    info.textContent = elsewhere.size + " recorded earlier this week";
+    info.textContent = elsewhere.size + " recorded in the other group already";
     const toggle = document.createElement("button");
     toggle.type = "button"; toggle.className = "linkbtn";
     toggle.textContent = showAllNames ? "Show remaining only" : "Show everyone";
@@ -626,7 +680,7 @@ function renderNames() {
   if (!list.length) {
     box.innerHTML = q
       ? '<div class="none">No match.</div>'
-      : '<div class="none">Everyone left is recorded elsewhere this week — search, or "Show everyone".</div>';
+      : '<div class="none">Everyone left is recorded in the other group — search, or "Show everyone".</div>';
     return;
   }
   list.forEach(s => {
@@ -713,38 +767,6 @@ function renderFactors() {
   });
   pw.appendChild(psc);
   box.appendChild(pw);
-
-  /* counters */
-  COUNTERS.forEach(c => {
-    const wrap = document.createElement("div"); wrap.className = "factor";
-    const lab = document.createElement("div"); lab.className = "flabel";
-    const n = document.createElement("span"); n.className = "fname"; n.style.textDecoration = "none";
-    n.textContent = c.name;
-    const h = document.createElement("span"); h.className = "fhint"; h.textContent = c.hint;
-    lab.appendChild(n); lab.appendChild(h); wrap.appendChild(lab);
-
-    const row = document.createElement("div"); row.className = "counter";
-    const cur = g.counts[c.key] || 0;
-    const minus = document.createElement("button");
-    minus.type = "button"; minus.textContent = "−";
-    minus.setAttribute("aria-label", "Decrease " + c.name);
-    minus.disabled = cur <= 0;
-    minus.onclick = () => {
-      g.counts[c.key] = Math.max(0, (g.counts[c.key] || 0) - 1);
-      write(K.blocks, blocks); renderFactors();
-    };
-    const val = document.createElement("div"); val.className = "cval"; val.textContent = String(cur);
-    const plus = document.createElement("button");
-    plus.type = "button"; plus.textContent = "+";
-    plus.setAttribute("aria-label", "Increase " + c.name);
-    plus.onclick = () => {
-      g.counts[c.key] = (g.counts[c.key] || 0) + 1;
-      write(K.blocks, blocks); renderFactors();
-    };
-    row.appendChild(minus); row.appendChild(val); row.appendChild(plus);
-    wrap.appendChild(row);
-    box.appendChild(wrap);
-  });
 }
 
 function renderAll() {
@@ -753,7 +775,9 @@ function renderAll() {
   el("weeklab").textContent = "Week " + b.week;
   el("wholab").textContent = b.ta;
   const bar = el("blockbar"); bar.innerHTML = "";
-  [[b.half, "tag"], [b.condition, "tag cond"]].forEach(([t, cls]) => {
+  const tags = [[b.half, "tag"], [b.condition, "tag cond"]];
+  if (b.group) tags.push(["Group " + b.group, "tag"]);
+  tags.forEach(([t, cls]) => {
     const s = document.createElement("span"); s.className = cls; s.textContent = t; bar.appendChild(s);
   });
   const rng = document.createElement("span");
@@ -787,14 +811,14 @@ function payload() {
   return {
     course: (roster && roster.course) || "HOFI",
     ta: device.ta,
-    schema: 2,
+    schema: 3,   // 3: cohort_group added (Group 1/2 within a TC session), stopThinking moved from counts into scores
     exported: new Date().toISOString(),
     blocks: Object.keys(blocks).sort().map(id => {
       const b = blocks[id];
       const present = assignedIn(b);
       return {
         block_id: id,
-        week: b.week, half: b.half, condition: b.condition,
+        week: b.week, half: b.half, condition: b.condition, cohort_group: b.group || null,
         ta: b.ta, groups_covered: [b.from, b.to],
         groups: groupNums(b)
           .filter(n => b.groups[n] &&
@@ -804,8 +828,7 @@ function payload() {
             students: b.groups[n].students,
             no_part: Object.keys(b.groups[n].flags),
             scores: b.groups[n].scores,
-            progress: b.groups[n].progress,
-            counts: b.groups[n].counts
+            progress: b.groups[n].progress
           })),
         not_seen: students().map(s => s.id).filter(id => !present.has(id))
       };

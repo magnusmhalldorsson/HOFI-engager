@@ -96,32 +96,41 @@ maintaining.
 
 ### There is deliberately no section per student, either
 
-Which half of the cohort a student sits with is **redrawn weekly and can
-change on the day**, and it is *not* a language split — the IS/EN division is
-not known to this app at all. Any per-student section stored here would be
-stale by week 2 and would quietly mislead, so the roster carries none.
+*Which* students end up in the room together is redrawn weekly and can change
+on the day, and it is *not* a language split — the IS/EN division is not known
+to this app at all. Any per-student section stored here would be stale by
+week 2 and would quietly mislead, so the roster carries none.
 
-Membership is entirely **observed**: whoever a TA taps in during a block *is*
-that block's population. See "How a block runs" below for how the app makes
-the second half-day fast without needing to know the split in advance.
+Membership is entirely **observed**: whoever a TA taps in during a session
+*is* that session's population. What the app *does* ask for explicitly is
+**which cohort group** a Thinking Classroom session is — Group 1 or Group 2,
+the two halves that swap Main/Extra room partway through a TC half-day (Group
+1 does Thinking Lab then Skill Lab; Group 2 the other order). That label has
+real, fixed meaning — it is not the same thing as the arbitrary weekly split —
+so it is a required, explicit choice, never inferred. Ordinary class has no
+such split; everyone is together as one block.
 
 Standard library only — nothing to install, runs on the system Python.
 
 ## What a recording covers
 
 Recording happens **only in the Thinking Lab**, and the unit is a **block** —
-one week, one half-day:
+one week, one half-day, plus a cohort group when the pedagogy is TC:
 
-    w05-AM     week 5, before lunch
-    w05-PM     week 5, after lunch
+    w05-AM        week 5, before lunch, Ordinary class — one block, everyone together
+    w05-AM-G1     week 5, before lunch, Thinking Classroom, Group 1
+    w05-AM-G2     week 5, before lunch, Thinking Classroom, Group 2
 
-Two blocks on a full teaching day. Each records which pedagogy ran in it —
-**TC** (Thinking Classroom) or **OC** (ordinary class) — which is the
-comparison the study turns on, so it is a required field rather than an
-optional label.
+An OC half-day is one block. A TC half-day is **two** — Group 1 and Group 2,
+recorded separately because the room-swap genuinely splits the cohort into two
+populations with two different orders (TC-first vs Skill-Lab-first), and that
+order is worth keeping as data, not collapsing away.
 
-A block does not pre-declare *who* it covers — the population is whichever
-students actually get tapped in.
+Each block records which pedagogy ran in it — **TC** (Thinking Classroom) or
+**OC** (ordinary class) — which is the comparison the study turns on, so it is
+a required field rather than an optional label. A block does not pre-declare
+*who* it covers beyond that — the population is whichever students actually
+get tapped in.
 
 ## A TA's process: select session, record, upload
 
@@ -132,33 +141,42 @@ drops out is not removed; they simply stop being tapped into any session,
 which is exactly how their absence should read.
 
 1. Students pick cards; the card is the group number.
-2. **Select the session** — week, half-day, pedagogy — then work through the
-   table-groups: tap the students at the table, rate engagement and
-   collaboration, mark how far the group got, and tally stop-thinking
-   questions. **No network needed.**
-3. **The first session of the day** is a plain search over the whole roster.
-4. **The second session of the day** defaults to showing only students not
-   already recorded elsewhere this week on this phone — normally exactly the
-   other half of the cohort, worked out from who was tapped into the first
-   session, with no need to know in advance which half is which. A "Show
+2. **Select the session** — week, half-day, pedagogy. If the pedagogy is
+   Thinking Classroom, also pick **which cohort group** this is, Group 1 or
+   Group 2 — check it against the day's actual room assignment, not memory.
+   Ordinary class has no group to pick; everyone is together.
+3. Work through the table-groups: tap the students at the table, rate
+   engagement and collaboration, mark how far the group got, and rate how
+   often they asked to be told rather than checking their own thinking.
+   **No network needed.**
+4. **Group 2's picker defaults to showing only students not already recorded
+   in Group 1** that same TC half-day — normally exactly who's left, since the
+   two groups between them cover the whole Thinking-Lab population. A "Show
    everyone" toggle and the search box both bypass the filter, for the rare
-   student in both rooms or a correction.
+   student in both, or a correction. Ordinary class always shows the full
+   roster — there is no pairing to filter against, since everyone attends it
+   together.
 5. Everyone tapped in counts as present *and* taking part. The `!` flag marks
    the exception — someone who took no part. Recording exceptions rather than
    ticking every student is what keeps this feasible at ~15 groups in 40
    minutes.
 6. Anyone never tapped in was not recorded in that session.
-7. **After the session, upload.** On a phone this hands the file to the OS
+7. **Tap a group's dot, at the top of the screen, to jump straight to it** —
+   useful for the expected rhythm of composing every group first and rating
+   them all near the end. A dot fills in once that group has students, all
+   three ratings, and a progress mark; a small counter under the dots tracks
+   how many are done, and a checkmark appears next to the group number itself
+   once the one you're on is complete.
+8. **After the session, upload.** On a phone this hands the file to the OS
    share sheet — the TA picks OneDrive, then the shared HOFI folder. On a
    computer (or any browser that can't share files) it downloads a file
    instead, for AirDrop or mail as a fallback. Either way it uploads
    *everything currently on the phone*, not just what's new — see the merge
    step below for why that's the right behaviour, not a bug.
 
-The "remaining students" filter only knows what is on **this** phone. If a
-second TA covers the other half on a different device, this phone has no way
-to see their data, and the filter falls back to showing everyone — same as
-the very first session of the week always does.
+The Group-1/Group-2 filter only knows what is on **this** phone. If a second
+TA covers the paired group on a different device, this phone has no way to
+see their data, and the filter falls back to showing everyone.
 
 **Overlapping coverage is expected, not an error.** The two TAs on duty may deliberately
 rate the same groups for the inter-rater agreement check, so the merge keeps
@@ -203,7 +221,7 @@ are different instruments and mixing them damages both:
 | | Grading | Research |
 |---|---|---|
 | Unit | Individual student | Group |
-| What | Present / took part / flagged | Engagement, collaboration, progress, question tally |
+| What | A 3-point scale per student: not tapped in (absent), tapped in (participated), tapped in and flagged with `!` (present but did not participate) | Engagement, collaboration, stop-thinking, progress — per group |
 | Opt-out | No — it is how the course is assessed | Yes |
 
 The reasoning is in the vault: `10-AI-and-Education/04-Projects/HOFI/Research/`
@@ -218,20 +236,21 @@ analysis. See [TODO.md](TODO.md), the single list.
 
 ## Configuration
 
-Measures are configuration, not code — `RATINGS`, `PROGRESS` and `COUNTERS` at
-the top of the app. Adding one mid-semester is a few lines, and earlier blocks
-simply carry no value for it.
+Measures are configuration, not code — `RATINGS` and `PROGRESS` at the top of
+the app. Adding one mid-semester is a few lines, and earlier blocks simply
+carry no value for it.
 
-- **Engagement** and **Collaboration** — Below / Expected / Above, each level
-  carrying a behavioural anchor the TA can expand by tapping the measure name.
-  The anchors are deliberately written so they can be observed in *either*
+- **Engagement**, **Collaboration**, and **Stop-thinking questions** —
+  Below / Expected / Above, each level carrying a behavioural anchor the TA
+  can expand by tapping the measure name. Stop-thinking was originally a
+  tally ("is this right?"), but keeping an accurate count proved impractical
+  mid-session, so it moved to the same 3-point scale as the other two. The
+  anchors are deliberately written so they can be observed in *either*
   condition; nothing refers to the whiteboard, because an ordinary class has
   none and a measure that means different things in the two arms cannot
   compare them.
 - **Progress** — None / Partial / Complete / Extended, read off the group's
   work rather than judged.
-- **Stop-thinking questions** — a tally ("is this right?"), not a rating.
-  Counts do not suffer halo, which ratings do.
 
 Three levels rather than four is deliberate: fewer options means faster
 decisions and better agreement between raters.

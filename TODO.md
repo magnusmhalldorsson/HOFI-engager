@@ -36,24 +36,26 @@ before the first session; everything below can arrive during the semester.
       overlap against which weeks were *meant* to be calibration weeks,
       because that schedule doesn't exist yet — tie it to the sealed weekly
       TC/OC allocation once that's built.
-- [x] **Populate the second half-day from "who's left."** No section field,
-      no pre-known split, no Akureyri exclusion list. The first block of a
-      week is a plain roster search; the picker for any later block that week
-      defaults to students not yet recorded elsewhere on this phone — with
-      search and a "Show everyone" toggle as the override for the rare
-      student in both, or a correction.
-- [ ] **The "remaining" filter is per-device only.** It only knows what is on
-      the phone doing the recording. If a second TA covers the other half on
-      a different device, this phone can't see their taps, so the filter
+- [x] **Populate Group 2 from "who's left."** Revised 2026-08-18 once it
+      became clear TC and OC halves are not symmetric: a TC half-day
+      genuinely splits into two populations (Group 1 / Group 2, the room-swap
+      order), so Group 2's picker defaults to students not yet recorded in
+      Group 1 that same half-day. Ordinary class has no split — everyone is
+      together — so it always shows the full roster, no filter. Search and a
+      "Show everyone" toggle bypass the filter either way.
+- [ ] **The Group 1/2 filter is per-device only.** It only knows what is on
+      the phone doing the recording. If a second TA covers the paired group
+      on a different device, this phone can't see their taps, so the filter
       falls back to showing everyone. Worth deciding whether the merge step
-      should cross-check the two devices' populations for a given week and
+      should cross-check the two devices' populations for a given block and
       flag it if they overlap more than a deliberate calibration week
       intends.
-- [ ] **Decide how the TC/OC allocation reaches the app.** Currently the TA
-      picks it per block, which is one tap and one chance to get it wrong; a
-      wrong value corrupts the primary comparison. Option: pre-load the sealed
-      weekly allocation as a small JSON the app reads, leaving the TA to
-      confirm rather than choose.
+- [ ] **Decide how the TC/OC allocation — and the cohort group — reach the
+      app.** Currently the TA picks both by hand each session: one tap each,
+      two chances to get it wrong, and a wrong cohort group silently creates
+      the wrong block (e.g. a second "Group 1" instead of resuming Group 2).
+      Option: pre-load the sealed weekly allocation as a small JSON the app
+      reads, leaving the TA to confirm rather than choose either field.
 - [x] **Backup to OneDrive.** Decided 2026-08-17: TAs have RU OneDrive
       accounts, so Magnús shares a folder with them directly and the app's
       Upload button shares straight to it via the OS share sheet (falls back
@@ -70,20 +72,33 @@ before the first session; everything below can arrive during the semester.
       sharing can't be exercised from a desktop or headless browser — the
       only real proof is an actual iPhone/Android tapping Upload and seeing
       OneDrive as a share target.
-- [ ] **Decide how the app reaches the phones.** GitHub Pages serves the repo
-      root or `/docs`, not `/app` — so either move the file or serve from
-      root. Then the TAs get a URL instead of a file.
-- [ ] **Confirm the repo's visibility on GitHub.** The code carries no student
-      data either way, but if it is public the ignore rules are load-bearing
-      rather than merely tidy.
+- [x] **Decide how the app reaches the phones.** Done 2026-08-18 — repo made
+      public, GitHub Pages publishes `app/` via Actions on every push. Live at
+      `https://magnusmhalldorsson.github.io/HOFI-engager/`.
+- [x] **Confirm the repo's visibility on GitHub.** Public, as of 2026-08-18 —
+      needed for free GitHub Pages. Confirmed safe before flipping it: the
+      code carries no student data, `data/` is gitignored, and the ignore
+      rules were audited immediately beforehand.
 - [ ] **Dry run with all three TAs before students are involved.** Three phones, the
       sample roster, fifteen groups each, export, merge. Cheaper to find the
-      problems now than in a classroom.
-- [x] **Replace the placeholder factors** with the real ones — engagement and
-      collaboration with behavioural anchors, progress read off the group's
-      work, and a stop-thinking question tally. Anchors still want piloting in
-      the dry run, then freezing at week 1: changing them mid-semester leaves
-      two incompatible scales in one dataset.
+      problems now than in a classroom. Should also exercise a TC half-day
+      with both Group 1 and Group 2 recorded, not just OC.
+- [x] **Replace the placeholder factors** with the real ones — engagement,
+      collaboration and stop-thinking with behavioural anchors (stop-thinking
+      moved from a planned tally to a rating, since keeping an accurate count
+      mid-session proved impractical), plus progress read off the group's
+      work. Anchors still want piloting in the dry run, then freezing at week
+      1: changing them mid-semester leaves two incompatible scales in one
+      dataset.
+- [x] **Cohort group (Group 1 / Group 2) for TC sessions.** Added 2026-08-18.
+      Selected explicitly by the TA, shown only when pedagogy is TC — Ordinary
+      class has no such split. Distinct from the numbered table-groups (1–15);
+      see [[HOFI Study Design]] for what the split now means.
+- [x] **Completion indicators while composing-then-rating.** Added 2026-08-18
+      for the expected TA workflow (seat every group first, rate near the
+      end): the dots are now tappable to jump straight to any group, a
+      counter under them tracks how many are fully entered, and a checkmark
+      appears next to the group number once the current one is done.
 
 ## During the semester
 
