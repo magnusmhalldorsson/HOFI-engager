@@ -1,0 +1,39 @@
+name: Publish the recorder app to GitHub Pages
+
+# Publishes app/ as-is, no build step -- it's a single static HTML file with
+# no dependencies. The source of truth stays at app/index.html; nothing gets
+# copied or duplicated elsewhere in the repo.
+#
+# Safe to publish publicly: the app never contains student data. It only
+# reads a roster.json a TA loads into their own phone's local storage, and
+# writes nothing back into this repo. data/ (the real roster, real exports)
+# is gitignored and never reaches GitHub.
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app
+      - id: deployment
+        uses: actions/deploy-pages@v4
