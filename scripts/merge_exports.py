@@ -86,6 +86,25 @@ DEFAULT_EXPORTS_DIR = (
 RATING_KEYS = ["engagement", "collaboration", "stopThinking"]
 
 
+RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9"]
+
+
+def group_sort_key(g):
+    """Sort card groups in draw order -- reds A..9, then blacks A..9.
+
+    Plain lexicographic order would interleave them as B7, R2, RA, which is
+    not how the cards sit on the table. Blocks recorded under the old numeric
+    scheme sort ahead of any card, by number.
+    """
+    g = str(g)
+    if g[:1] in ("R", "B") and g[1:] in RANKS:
+        return (1, 0 if g[0] == "R" else 1, RANKS.index(g[1:]))
+    try:
+        return (0, 0, int(g))
+    except ValueError:
+        return (2, 0, 0)
+
+
 def load_json(path):
     try:
         with open(path, encoding="utf-8") as fh:
@@ -196,7 +215,7 @@ def merge(chosen, roster):
         # different TAs -- the case neither phone alone can see.
         student_locations = defaultdict(list)
 
-        for gnum in sorted(rec["groups"]):
+        for gnum in sorted(rec["groups"], key=group_sort_key):
             ratings = rec["groups"][gnum]
             groups_out.append({"group": gnum, "ratings": ratings})
             for r in ratings:

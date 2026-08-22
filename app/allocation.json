@@ -1,0 +1,143 @@
+{
+  "course": "HOFI",
+  "drawn": "2026-08-21T11:52:11+00:00",
+  "seed": "0e9ee061b7e0df2a",
+  "method": "low bit of SHA-256('<seed>|week<n>'): 0 -> Group 1 takes the Thinking Lab first in the morning, 1 -> Group 2 does. The afternoon is the complement of the morning.",
+  "covers": "weeks 2-12; week 1 (2026-08-19) is outside the study",
+  "weeks": [
+    {
+      "week": 2,
+      "date": "2026-08-26",
+      "AM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      },
+      "PM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      }
+    },
+    {
+      "week": 3,
+      "date": "2026-09-02",
+      "AM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      },
+      "PM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      }
+    },
+    {
+      "week": 4,
+      "date": "2026-09-09",
+      "AM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      },
+      "PM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      }
+    },
+    {
+      "week": 5,
+      "date": "2026-09-16",
+      "AM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      },
+      "PM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      }
+    },
+    {
+      "week": 6,
+      "date": "2026-09-23",
+      "AM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      },
+      "PM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      }
+    },
+    {
+      "week": 7,
+      "date": "2026-09-30",
+      "AM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      },
+      "PM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      }
+    },
+    {
+      "week": 8,
+      "date": "2026-10-07",
+      "AM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      },
+      "PM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      }
+    },
+    {
+      "week": 9,
+      "date": "2026-10-14",
+      "AM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      },
+      "PM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      }
+    },
+    {
+      "week": 10,
+      "date": "2026-10-21",
+      "AM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      },
+      "PM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      }
+    },
+    {
+      "week": 11,
+      "date": "2026-10-28",
+      "AM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      },
+      "PM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      },
+      "note": "final-project week -- included for completeness; the Thinking Lab may not run in this form"
+    },
+    {
+      "week": 12,
+      "date": "2026-11-04",
+      "AM": {
+        "thinking_lab_first": "1",
+        "thinking_lab_second": "2"
+      },
+      "PM": {
+        "thinking_lab_first": "2",
+        "thinking_lab_second": "1"
+      },
+      "note": "final-project week -- included for completeness; the Thinking Lab may not run in this form"
+    }
+  ]
+}

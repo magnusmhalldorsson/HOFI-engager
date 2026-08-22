@@ -26,8 +26,8 @@ before the first session; everything below can arrive during the semester.
       see alone: the same student recorded under two different group numbers
       by two different TAs in the same block. Recomputes `not_seen` from the
       union rather than trusting any single export's copy. Tested against
-      synthetic data covering all five cases; not yet run against a real
-      export. With no arguments it reads the shared OneDrive Uploads folder
+      synthetic data covering all five cases, and run against a real
+      export on 2026-08-20. With no arguments it reads the shared OneDrive Uploads folder
       directly; pass paths explicitly to merge a specific subset instead.
       **Still open:** the agreement figure is plain percent-match, which is
       fine for a first look but not the real statistic (see the script's
@@ -40,9 +40,25 @@ before the first session; everything below can arrive during the semester.
       became clear TC and OC halves are not symmetric: a TC half-day
       genuinely splits into two populations (Group 1 / Group 2, the room-swap
       order), so Group 2's picker defaults to students not yet recorded in
-      Group 1 that same half-day. Ordinary class has no split — everyone is
+      Group 1 that same half-day. The Open Challenge has no split — everyone is
       together — so it always shows the full roster, no filter. Search and a
       "Show everyone" toggle bypass the filter either way.
+- [x] **Groups are identified by their card, not by a number.** Changed
+      2026-08-20 after MMH confirmed how grouping actually works: students draw
+      from a reduced deck (no 10/J/Q/K), so a group is a rank *and* a colour —
+      red 7 and black 7 are different groups. At most 15 groups in a room out
+      of 18 available cards. The old 1–15 range turned out to be each TA's own
+      running counter, mapped to the room by a method nobody recorded, which
+      made the group identifier meaningless across TAs and across sessions. The
+      card is externally visible to both TAs and the students, so two observers
+      of the same group now record the same value — inter-rater agreement can
+      be read directly instead of reconstructed from student membership. Export
+      schema 4; blocks recorded under the old numbering still open, render and
+      export, keeping their numbers. Not yet exercised on a real phone.
+      **Still open:** a card names a group only within its room, so the cohort
+      holds two red aces. Today that never reaches the data because TAs record
+      only in the Thinking Lab, which is room-split — but any recording in a
+      whole-cohort block would need the room alongside the card.
 - [ ] **The Group 1/2 filter is per-device only.** It only knows what is on
       the phone doing the recording. If a second TA covers the paired group
       on a different device, this phone can't see their taps, so the filter
@@ -50,12 +66,27 @@ before the first session; everything below can arrive during the semester.
       should cross-check the two devices' populations for a given block and
       flag it if they overlap more than a deliberate calibration week
       intends.
-- [ ] **Decide how the TC/OC allocation — and the cohort group — reach the
-      app.** Currently the TA picks both by hand each session: one tap each,
-      two chances to get it wrong, and a wrong cohort group silently creates
-      the wrong block (e.g. a second "Group 1" instead of resuming Group 2).
-      Option: pre-load the sealed weekly allocation as a small JSON the app
-      reads, leaving the TA to confirm rather than choose either field.
+- [x] **Decide how the weekly allocation — and the cohort group — reach the
+      app.** Done 2026-08-21. `scripts/make_allocation.py` draws the whole
+      weeks 2–12 order allocation from a recorded seed and writes
+      `app/allocation.json`, which the app fetches and caches so it still
+      knows the schedule with no network. The chooser now states, for the
+      selected week and half, which cohort group takes the Thinking Lab first
+      and which follows, and says which week it is talking about — so a wrong
+      week number shows up as a mismatch rather than as a plausible line.
+      **Shown, never auto-selected:** a wrong cohort group silently creates
+      the wrong block, so the app must not guess on the TA's behalf. With no
+      allocation fetched the picker behaves exactly as before.
+      `--check --seed <seed>` regenerates and compares, which is what makes
+      the pre-registration's "seed recorded in advance" a checkable claim.
+      **Note on the old wording:** this item used to say *TC/OC allocation*.
+      There is no TC/OC allocation — that predates the 2026-08-19 correction
+      establishing that no ordinary-class arm exists in the timetable. Both
+      half-days have the same structure and nothing is allocated between them.
+      **Resolved 2026-08-22:** `OC` means **Open Challenge**, always — the seated
+      block that follows the Thinking Lab. There is no ordinary class in this course.
+      The app's condition button was mislabelled "Ordinary class"; relabelled, key
+      unchanged, so no recorded data needed migrating.
 - [x] **Backup to OneDrive.** Decided 2026-08-17: TAs have RU OneDrive
       accounts, so Magnús shares a folder with them directly and the app's
       Upload button shares straight to it via the OS share sheet (falls back
@@ -92,7 +123,7 @@ before the first session; everything below can arrive during the semester.
       dataset.
 - [x] **Cohort group (Group 1 / Group 2) for TC sessions.** Added 2026-08-18.
       Selected explicitly by the TA, shown only when pedagogy is TC — Ordinary
-      class has no such split. Distinct from the numbered table-groups (1–15);
+      class has no such split. Distinct from the card table-groups;
       see [[HOFI Study Design]] for what the split now means.
 - [x] **Completion indicators while composing-then-rating.** Added 2026-08-18
       for the expected TA workflow (seat every group first, rate near the

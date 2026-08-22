@@ -12,6 +12,7 @@
     --rule:#d2dad6; --teal:#0e6e63; --teal-soft:#d6e8e5;
     --done:#2f7d4f; --alert:#b4531b; --alert-soft:#f6e3d5; --on-teal:#fff;
     --shadow:0 1px 2px rgba(20,40,35,.08),0 4px 14px rgba(20,40,35,.06);
+    --card-red:#b3261e; --card-black:#16201d;
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
@@ -20,7 +21,8 @@
     --ink:#e6ecea; --ink-soft:#9fb0ab; --ink-faint:#6d7f7a;
     --rule:#2e3a3f; --teal:#4bbfae; --teal-soft:#1d3b39;
     --done:#56b07a; --alert:#e08a4e; --alert-soft:#3a2a1c; --on-teal:#10161a;
-    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);}}
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+    --card-red:#ff9c8f; --card-black:#e6ecea;}}
   *{box-sizing:border-box}
   body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
        font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
@@ -40,6 +42,13 @@
   .dots{display:flex;gap:3px;margin-top:.55rem}
   .dot{flex:1;height:8px;padding:0;border:none;border-radius:2px;background:var(--rule);cursor:pointer}
   .dot.done{background:var(--done)} .dot.cur{background:var(--teal)}
+  .cardgrid{display:grid;grid-template-columns:repeat(9,1fr);gap:.3rem;margin-top:.4rem}
+  .card{padding:.55rem 0;border:1px solid var(--rule);border-radius:6px;background:var(--surface-2);
+        font-size:1rem;font-weight:700;line-height:1;cursor:pointer}
+  .card.red{color:var(--card-red)} .card.black{color:var(--card-black)}
+  .card.off{opacity:.28;text-decoration:line-through}
+  .cred{color:var(--card-red)} .cblack{color:var(--card-black)}
+  .alert-note{color:var(--alert);font-weight:600}
   .stepper{display:flex;align-items:center;gap:.75rem;padding:1rem 1rem .4rem}
   .step-btn{width:3rem;height:3rem;border-radius:50%;border:1px solid var(--rule);
             background:var(--surface-2);font-size:1.4rem;line-height:1;display:grid;place-items:center;flex:none}
@@ -180,14 +189,16 @@
       <label>Which cohort group is this?</label>
       <div class="seg" id="segGroup"></div>
       <p class="note">Group 1 does Thinking Lab first, then Skill Lab. Group 2 does Skill Lab first,
-         then Thinking Lab. Not the numbered table-groups below — the room-swap pairing. In
-         Ordinary class everyone is together, so this does not apply.</p>
+         then Thinking Lab. Not the card table-groups below — the room-swap pairing. In
+         the Open Challenge everyone is together, so this does not apply.</p>
+      <p class="note" id="allocNote"></p>
     </div>
 
-    <div class="row">
-      <div><label for="bfrom">First group</label><input type="number" id="bfrom" min="1" value="1"></div>
-      <div><label for="bto">Last group</label><input type="number" id="bto" min="1" value="15"></div>
-    </div>
+    <label style="margin-top:1rem;display:block">Which cards are in play?</label>
+    <div class="cardgrid" id="cardGrid"></div>
+    <p class="note">One card per table-group, as drawn. At most 15 groups in a room, so a few
+       cards are usually out — tap those to drop them. A card names a group only inside its own
+       room: with both rooms together the cohort holds two red aces.</p>
 
     <button class="next" id="openBlock" style="margin-top:1.2rem">Start / resume this session</button>
 
@@ -214,7 +225,7 @@
 
     <div class="stepper">
       <button class="step-btn" id="prev" aria-label="Previous group">&lsaquo;</button>
-      <div class="gnum"><div class="lab">Group</div><div class="val"><span id="gval">1</span><span id="gdone" class="done-badge hidden" aria-label="This group is fully entered">&check;</span></div></div>
+      <div class="gnum"><div class="lab" id="glab">Group</div><div class="val"><span id="gval">1</span><span id="gdone" class="done-badge hidden" aria-label="This group is fully entered">&check;</span></div></div>
       <button class="step-btn" id="nextG" aria-label="Next group">&rsaquo;</button>
     </div>
 
@@ -279,7 +290,7 @@
    Ratings carry behavioural anchors: each level says what the TA would see,
    not how strongly they feel about the group. Anchors are deliberately written
    so they can be observed in EITHER condition — nothing here refers to the
-   whiteboard, because an ordinary class does not have one, and a measure that
+   whiteboard, because the seated Open Challenge does not have one, and a measure that
    means different things in the two arms cannot compare them.
 
    Add a measure here and it appears everywhere; earlier blocks simply carry no
@@ -326,18 +337,32 @@ const HALVES = [
 ];
 const CONDITIONS = [
   { key: "TC", label: "Thinking Classroom" },
-  { key: "OC", label: "Ordinary class" }
+  { key: "OC", label: "Open Challenge" }
 ];
-/* The room-swap pairing within a TC session -- NOT the numbered table-groups
-   (1..15) TAs step through below. Only meaningful when condition is TC:
-   Ordinary class runs with everyone together, so it does not apply. */
+/* The room-swap pairing within a TC session -- NOT the card table-groups
+   TAs step through below. Only meaningful when condition is TC:
+   the Open Challenge runs with everyone together, so it does not apply. */
 const COHORT_GROUPS = [
   { key: "1", label: "Group 1" },
   { key: "2", label: "Group 2" }
 ];
+/* Table-groups are identified by the card they drew, not by a number. The deck
+   is reduced -- no 10, J, Q or K -- so A..9 in two colours gives 18 slots for
+   at most 15 groups in a room. Rank alone is not an identifier: red 7 and
+   black 7 are different groups. Nor is the card unique across the cohort --
+   each room draws independently, so with both rooms together there are two
+   red aces. That is why cohort_group is part of the block identity. */
+const RANKS = ["A","2","3","4","5","6","7","8","9"];
+const CARDS = RANKS.map(r => ({ key:"R"+r, rank:r, colour:"red" }))
+       .concat(RANKS.map(r => ({ key:"B"+r, rank:r, colour:"black" })));
+const ALL_CARDS = CARDS.map(c => c.key);
+const cardRank   = k => k.slice(1);
+const cardColour = k => (k[0] === "R" ? "red" : "black");
+const cardLabel  = k => cardColour(k) + " " + (cardRank(k) === "A" ? "ace" : cardRank(k));
 /* ------------------------------------------------------------------------ */
 
-const K = { roster:"hofi.roster", device:"hofi.device", blocks:"hofi.blocks", draft:"hofi.draft" };
+const K = { roster:"hofi.roster", device:"hofi.device", blocks:"hofi.blocks", draft:"hofi.draft",
+            alloc:"hofi.alloc" };
 const el = id => document.getElementById(id);
 const read = (k, fb) => { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch (e) { return fb; } };
 const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
@@ -345,7 +370,14 @@ const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 let roster = read(K.roster, null);
 let device = read(K.device, null);
 let blocks = read(K.blocks, {});          // blockId -> block record
-let draft  = read(K.draft, { week:1, half:"AM", condition:null, group:null, from:1, to:15 });
+/* The sealed weekly order allocation -- which cohort group takes the Thinking Lab
+   first, drawn in advance from a recorded seed (scripts/make_allocation.py). Cached
+   after the first successful fetch so the app still knows it with no network, and
+   simply absent if it has never been fetched: the TA then picks unaided, exactly as
+   before. It is shown to be confirmed against, never auto-selected -- a wrong cohort
+   group silently creates the wrong block, so this must not guess on the TA's behalf. */
+let alloc = read(K.alloc, null);
+let draft  = read(K.draft, { week:1, half:"AM", condition:null, group:null, cards:ALL_CARDS.slice() });
 let curId  = null;                         // block currently open
 let showAllNames = false;                  // picker filter override; reset when the block changes
 
@@ -360,11 +392,17 @@ const blockId = d => "w" + String(d.week).padStart(2,"0") + "-" + d.half +
 const blockLabel = b => "W" + b.week + " " + b.half + " · " + b.condition +
                          (b.group ? " · Group " + b.group : "");
 
-const groupNums = b => {
+/* Blocks recorded before the card change carry a numeric from..to range.
+   They are read back as strings so the rest of the app treats old and new
+   blocks alike -- object keys are strings either way. */
+const groupKeys = b => {
+  if (b.cards) return b.cards.slice();
   const out = [];
-  for (let n = b.from; n <= b.to; n++) out.push(n);
+  for (let n = b.from; n <= b.to; n++) out.push(String(n));
   return out;
 };
+const groupLabel = k => /^[RB]/.test(k) ? cardLabel(k) : "group " + k;
+const groupIdx = b => Math.max(0, groupKeys(b).indexOf(String(b.current)));
 const isComplete = g =>
   g.students.length > 0 && RATINGS.every(r => g.scores[r.key] != null) && g.progress != null;
 const assignedIn = b => new Set(Object.values(b.groups).flatMap(g => g.students));
@@ -372,7 +410,7 @@ const assignedIn = b => new Set(Object.values(b.groups).flatMap(g => g.students)
 /* Everyone already recorded in this TC session's PAIRED block -- the other
    cohort group, same week and half-day. Group 1 and Group 2 between them
    cover the whole Thinking-Lab population, so once one is recorded the other
-   is mostly "whoever's left". Ordinary class has no pairing -- everyone is
+   is mostly "whoever's left". The Open Challenge has no pairing -- everyone is
    together in one block -- so this returns empty and the picker always shows
    the full roster there, same as it does for the very first block recorded.
    There is no cross-device knowledge: a second TA covering the paired group
@@ -450,7 +488,7 @@ el("wipe").onclick = () => {
   if (!confirm("Erase the roster and every recorded block on this phone?")) return;
   [K.roster, K.device, K.blocks, K.draft].forEach(k => localStorage.removeItem(k));
   roster = null; device = null; blocks = {}; curId = null;
-  draft = { week:1, half:"AM", condition:null, group:null, from:1, to:15 };
+  draft = { week:1, half:"AM", condition:null, group:null, cards:ALL_CARDS.slice() };
   renderRosterState();
   alert("Erased.");
   show("setup");
@@ -475,11 +513,7 @@ function segment(host, options, current, onPick) {
    from the stale draft and silently throw the typed value away. */
 function readChooserInputs() {
   const wk = parseInt(el("bweek").value, 10);
-  const from = parseInt(el("bfrom").value, 10);
-  const to = parseInt(el("bto").value, 10);
   if (wk >= 1) draft.week = wk;
-  if (from >= 1) draft.from = from;
-  if (to >= 1) draft.to = to;
 }
 
 function pick(field, key) {
@@ -491,8 +525,6 @@ function pick(field, key) {
 
 function renderChooser() {
   el("bweek").value = draft.week;
-  el("bfrom").value = draft.from;
-  el("bto").value = draft.to;
   segment(el("segHalf"), HALVES, draft.half, k => pick("half", k));
   segment(el("segCondition"), CONDITIONS, draft.condition, k => {
     readChooserInputs();
@@ -505,6 +537,8 @@ function renderChooser() {
   const showGroup = draft.condition === "TC";
   el("groupWrap").classList.toggle("hidden", !showGroup);
   if (showGroup) segment(el("segGroup"), COHORT_GROUPS, draft.group, k => pick("group", k));
+  if (showGroup) renderAllocNote();
+  renderCardGrid();
 
   const ids = Object.keys(blocks).sort().reverse();
   const box = el("recent");
@@ -518,18 +552,74 @@ function renderChooser() {
   list.className = "blocklist";
   ids.forEach(id => {
     const b = blocks[id];
-    const done = groupNums(b).filter(n => b.groups[n] && isComplete(b.groups[n])).length;
+    const done = groupKeys(b).filter(n => b.groups[n] && isComplete(b.groups[n])).length;
     const row = document.createElement("button");
     row.type = "button"; row.className = "blockrow";
     const lab = document.createElement("span");
     lab.className = "grow"; lab.textContent = blockLabel(b);
     const cnt = document.createElement("span");
-    cnt.className = "cnt"; cnt.textContent = done + "/" + groupNums(b).length;
+    cnt.className = "cnt"; cnt.textContent = done + "/" + groupKeys(b).length;
     row.appendChild(lab); row.appendChild(cnt);
     row.onclick = () => { curId = id; showAllNames = false; show("main"); renderAll(); };
     list.appendChild(row);
   });
   box.appendChild(list);
+}
+
+function renderCardGrid() {
+  const box = el("cardGrid");
+  box.innerHTML = "";
+  const on = new Set(draft.cards || ALL_CARDS);
+  CARDS.forEach(c => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "card " + c.colour + (on.has(c.key) ? "" : " off");
+    b.textContent = c.rank;
+    b.setAttribute("aria-pressed", String(on.has(c.key)));
+    b.setAttribute("aria-label", cardLabel(c.key) + (on.has(c.key) ? ", in play" : ", not in play"));
+    b.onclick = () => {
+      const set = new Set(draft.cards || ALL_CARDS);
+      set.has(c.key) ? set.delete(c.key) : set.add(c.key);
+      draft.cards = ALL_CARDS.filter(k => set.has(k));
+      write(K.draft, draft);
+      renderCardGrid();
+    };
+    box.appendChild(b);
+  });
+}
+
+function loadAllocation() {
+  fetch("allocation.json", { cache: "no-cache" })
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (!d || !Array.isArray(d.weeks)) return;
+      alloc = d; write(K.alloc, d);
+      if (!el("blocks").classList.contains("hidden")) renderAllocNote();
+    })
+    .catch(() => {});          // offline, or served from a phone's cache -- fine
+}
+loadAllocation();
+
+function allocFor(week) {
+  return alloc && alloc.weeks ? alloc.weeks.find(w => w.week === week) : null;
+}
+
+function renderAllocNote() {
+  const box = el("allocNote");
+  if (!box) return;
+  const w = allocFor(draft.week), half = draft.half;
+  if (!w || !w[half]) {
+    box.textContent = alloc
+      ? "No sealed allocation for week " + draft.week + " — check the week number."
+      : "";
+    box.classList.toggle("alert-note", !!alloc);
+    return;
+  }
+  const first = w[half].thinking_lab_first, second = w[half].thinking_lab_second;
+  box.classList.remove("alert-note");
+  box.textContent = "Sealed allocation for week " + w.week + " " + half + ": Group " +
+    first + " takes the Thinking Lab first, then Group " + second +
+    ". Confirm against the room, then tap the one you are recording.";
 }
 
 function openChooser() {
@@ -541,15 +631,14 @@ function openChooser() {
 
 el("openBlock").onclick = () => {
   const wk = parseInt(el("bweek").value, 10);
-  const from = parseInt(el("bfrom").value, 10);
-  const to = parseInt(el("bto").value, 10);
+  const cards = (draft.cards && draft.cards.length) ? draft.cards.slice() : null;
   if (!(wk >= 1)) { alert("Check the week number."); return; }
-  if (!(from >= 1) || !(to >= from)) { alert("Check the group range."); return; }
+  if (!cards) { alert("Pick at least one card — one per table-group."); return; }
   if (!draft.condition) { alert("Pick which pedagogy ran in this session."); return; }
   if (draft.condition === "TC" && !draft.group) {
     alert("Pick which cohort group this is — Group 1 or Group 2."); return;
   }
-  draft.week = wk; draft.from = from; draft.to = to;
+  draft.week = wk;
   write(K.draft, draft);
 
   const group = draft.condition === "TC" ? draft.group : null;
@@ -557,7 +646,7 @@ el("openBlock").onclick = () => {
   if (!blocks[id]) {
     blocks[id] = {
       week: wk, half: draft.half, condition: draft.condition, group: group,
-      ta: device.ta, from: from, to: to, current: from, groups: {}
+      ta: device.ta, cards: cards, current: cards[0], groups: {}
     };
   } else {
     const b = blocks[id];
@@ -567,10 +656,17 @@ el("openBlock").onclick = () => {
     }
     b.condition = draft.condition;
     b.group = group;
-    b.from = Math.min(b.from, from); b.to = Math.max(b.to, to);
+    /* Resuming with a different card set adds to it rather than replacing:
+       a group already recorded must not vanish because a card was toggled. */
+    const union = new Set(groupKeys(b).concat(cards));
+    b.cards = ALL_CARDS.filter(k => union.has(k))
+              .concat(groupKeys(b).filter(k => !/^[RB]/.test(k)));
+    delete b.from; delete b.to;
   }
   const b = blocks[id];
-  groupNums(b).forEach(n => { if (!b.groups[n]) b.groups[n] = { students: [], flags: {}, scores: {}, progress: null }; });
+  b.current = String(b.current);
+  if (groupKeys(b).indexOf(b.current) < 0) b.current = groupKeys(b)[0];
+  groupKeys(b).forEach(n => { if (!b.groups[n]) b.groups[n] = { students: [], flags: {}, scores: {}, progress: null }; });
   write(K.blocks, blocks);
   curId = id;
   showAllNames = false;
@@ -588,20 +684,22 @@ function renderDots() {
   const b = B(), box = el("dots");
   box.innerHTML = "";
   let doneCount = 0;
-  const nums = groupNums(b);
+  const nums = groupKeys(b);
   nums.forEach(n => {
     const done = isComplete(b.groups[n]);
     if (done) doneCount++;
     const d = document.createElement("button");
     d.type = "button";
     d.className = "dot" + (n === b.current ? " cur" : done ? " done" : "");
-    d.setAttribute("aria-label", "Group " + n + (done ? ", entered" : ", not yet entered") +
+    d.setAttribute("aria-label", groupLabel(n) + (done ? ", entered" : ", not yet entered") +
       (n === b.current ? " — current" : ""));
     d.onclick = () => { if (n !== b.current) { b.current = n; write(K.blocks, blocks); renderAll(); } };
     box.appendChild(d);
   });
   el("progresslab").textContent = doneCount + " of " + nums.length + " groups entered";
   el("gdone").classList.toggle("hidden", !isComplete(b.groups[b.current]));
+  const gk = String(b.current);
+  el("glab").textContent = /^[RB]/.test(gk) ? cardColour(gk) : "Group";
 }
 
 function renderSeats() {
@@ -771,7 +869,10 @@ function renderFactors() {
 
 function renderAll() {
   const b = B();
-  el("gval").textContent = b.current;
+  const k = String(b.current);
+  el("gval").innerHTML = /^[RB]/.test(k)
+    ? '<span class="' + (cardColour(k) === "red" ? "cred" : "cblack") + '">' + cardRank(k) + '</span>'
+    : k;
   el("weeklab").textContent = "Week " + b.week;
   el("wholab").textContent = b.ta;
   const bar = el("blockbar"); bar.innerHTML = "";
@@ -781,15 +882,16 @@ function renderAll() {
     const s = document.createElement("span"); s.className = cls; s.textContent = t; bar.appendChild(s);
   });
   const rng = document.createElement("span");
-  rng.textContent = "groups " + b.from + "–" + b.to;
+  rng.textContent = groupKeys(b).length + " groups";
   bar.appendChild(rng);
-  el("prev").disabled = b.current <= b.from;
-  el("nextG").disabled = b.current >= b.to;
+  el("prev").disabled = groupIdx(b) <= 0;
+  el("nextG").disabled = groupIdx(b) >= groupKeys(b).length - 1;
   renderDots(); renderSeats(); renderNames(); renderFactors();
 }
 
 function step(delta) {
-  B().current += delta;
+  const b0 = B(), ks = groupKeys(b0);
+  b0.current = ks[Math.min(ks.length - 1, Math.max(0, groupIdx(b0) + delta))];
   write(K.blocks, blocks);
   el("picker").classList.add("hidden");
   renderAll(); window.scrollTo(0, 0);
@@ -799,7 +901,7 @@ el("prev").onclick = () => step(-1);
 el("nextG").onclick = () => step(1);
 el("advance").onclick = () => {
   const b = B();
-  if (b.current < b.to) step(1); else openSummary();
+  if (groupIdx(b) < groupKeys(b).length - 1) step(1); else openSummary();
 };
 el("toBlocks").onclick = openChooser;
 el("toSummary").onclick = openSummary;
@@ -811,7 +913,8 @@ function payload() {
   return {
     course: (roster && roster.course) || "HOFI",
     ta: device.ta,
-    schema: 3,   // 3: cohort_group added (Group 1/2 within a TC session), stopThinking moved from counts into scores
+    schema: 4,   // 4: groups identified by drawn card (R/B + A..9), not by number; groups_covered is now that card list
+                 // 3: cohort_group added (Group 1/2 within a TC session), stopThinking moved from counts into scores
     exported: new Date().toISOString(),
     blocks: Object.keys(blocks).sort().map(id => {
       const b = blocks[id];
@@ -819,8 +922,8 @@ function payload() {
       return {
         block_id: id,
         week: b.week, half: b.half, condition: b.condition, cohort_group: b.group || null,
-        ta: b.ta, groups_covered: [b.from, b.to],
-        groups: groupNums(b)
+        ta: b.ta, groups_covered: groupKeys(b),
+        groups: groupKeys(b)
           .filter(n => b.groups[n] &&
             (b.groups[n].students.length || Object.keys(b.groups[n].scores).length))
           .map(n => ({
@@ -841,11 +944,11 @@ function problems() {
   Object.keys(blocks).sort().forEach(id => {
     const b = blocks[id];
     const counts = {};
-    groupNums(b).forEach(n => (b.groups[n] ? b.groups[n].students : [])
+    groupKeys(b).forEach(n => (b.groups[n] ? b.groups[n].students : [])
       .forEach(sid => { counts[sid] = (counts[sid] || 0) + 1; }));
     const d = Object.keys(counts).filter(sid => counts[sid] > 1);
     if (d.length) dups.push({ id: id, label: blockLabel(b), names: d.map(sid => (byId(sid) || {}).name || sid) });
-    const p = groupNums(b).filter(n => b.groups[n] && !isComplete(b.groups[n]) &&
+    const p = groupKeys(b).filter(n => b.groups[n] && !isComplete(b.groups[n]) &&
       (b.groups[n].students.length || Object.keys(b.groups[n].scores).length));
     if (p.length) partial.push({ label: blockLabel(b), groups: p });
   });
@@ -855,7 +958,7 @@ function problems() {
 function openSummary() {
   const ids = Object.keys(blocks);
   let done = 0;
-  ids.forEach(id => { done += groupNums(blocks[id]).filter(n => blocks[id].groups[n] && isComplete(blocks[id].groups[n])).length; });
+  ids.forEach(id => { done += groupKeys(blocks[id]).filter(n => blocks[id].groups[n] && isComplete(blocks[id].groups[n])).length; });
   const pr = problems();
 
   el("sBlocks").textContent = ids.length;
@@ -885,11 +988,11 @@ function openSummary() {
   const list = document.createElement("div"); list.className = "blocklist";
   ids.sort().forEach(id => {
     const b = blocks[id];
-    const n = groupNums(b).filter(x => b.groups[x] && isComplete(b.groups[x])).length;
+    const n = groupKeys(b).filter(x => b.groups[x] && isComplete(b.groups[x])).length;
     const row = document.createElement("div"); row.className = "blockrow";
     const lab = document.createElement("span"); lab.className = "grow"; lab.textContent = blockLabel(b);
     const cnt = document.createElement("span"); cnt.className = "cnt";
-    cnt.textContent = n + "/" + groupNums(b).length;
+    cnt.textContent = n + "/" + groupKeys(b).length;
     row.appendChild(lab); row.appendChild(cnt);
     list.appendChild(row);
   });
