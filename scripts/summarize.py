@@ -21,7 +21,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-RATING_KEYS = ["engagement", "collaboration", "stop_thinking"]
+RATING_KEYS = ["engagement", "collaboration", "self_reliance"]
 SCALE_ORDER = ["Below", "Expected", "Above"]
 PROGRESS_ORDER = ["None", "Partial", "Complete"]
 
@@ -107,8 +107,8 @@ def main() -> None:
         return same, len(pairs)
 
     print("\nExact agreement between rated constructs (halo check -- see HOFI Measurement Plan)")
-    for a, b in [("engagement", "collaboration"), ("engagement", "stop_thinking"),
-                 ("collaboration", "stop_thinking")]:
+    for a, b in [("engagement", "collaboration"), ("engagement", "self_reliance"),
+                 ("collaboration", "self_reliance")]:
         res = agree_rate(a, b)
         if res:
             same, n = res

@@ -235,6 +235,7 @@
         <span class="sec-note" id="seatcount">0 assigned</span>
       </div>
       <div class="seats" id="seats"></div>
+      <p class="note" id="placedcount" style="margin:.5rem 0 0"></p>
       <p class="note" style="margin:.5rem 0 0">Everyone listed counts as present and taking part.
          Tap <b>!</b> only to flag someone who took no part — the exception, not the rule.</p>
       <div class="picker hidden" id="picker">
@@ -316,14 +317,22 @@ const RATINGS = [
     }
   },
   {
-    /* Liljedahl's "stop-thinking" questions -- is this right? is this what you
-       want? A count proved impractical to keep reliably mid-session, so this
-       is rated like the other two rather than tallied. */
-    key: "stopThinking", name: "Stop-thinking questions", hint: "asking to be told, rather than checking it themselves",
+    /* Built on Liljedahl's "stop-thinking" questions -- is this right? is this
+       what you want? A count proved impractical to keep reliably mid-session, so
+       this is rated like the other two rather than tallied.
+
+       Named and ordered as SELF-RELIANCE, not as a count of the questions:
+       "Above" is the good end on all three scales, which is the only way a rater
+       can hold them in their head at once. Rated as stop-thinking questions it ran
+       backwards -- more questions scored "Above" -- and a TA reading three scales
+       in a row would have inverted it. Key renamed from stopThinking at the same
+       time, deliberately: the stored values mean the OPPOSITE of what they used to,
+       so old data must not silently merge with new. */
+    key: "selfReliance", name: "Self-reliance", hint: "checking their own thinking, rather than asking to be told",
     anchors: {
-      "Below": "Hardly any stop-thinking questions (“is this right?”, “is this what you want?”) — the group checks its own thinking rather than asking to be told.",
+      "Below": "Frequently asking to be told whether they're right (“is this right?”, “is this what you want?”) rather than working it out themselves.",
       "Expected": "A normal mix — some checking in, alongside the group working things out on their own.",
-      "Above": "Frequently asking to be told whether they're right, rather than working it out themselves."
+      "Above": "Hardly any asking to be told — the group checks its own thinking and settles its own arguments."
     }
   }
 ];
@@ -749,6 +758,16 @@ function renderSeats() {
   box.appendChild(add);
   const flagged = Object.keys(g.flags).length;
   el("seatcount").textContent = g.students.length + " assigned" + (flagged ? " · " + flagged + " flagged" : "");
+
+  /* Running total across the WHOLE session, not just this table. A group that
+     never got entered is then visible while there is still time to fix it,
+     rather than turning up as a gap in the merge days later. */
+  const placed = assignedIn(b).size;
+  // tables that actually have somebody at them -- not every card in the deck
+  const used = groupKeys(b).filter(k => b.groups[k] && b.groups[k].students.length).length;
+  el("placedcount").innerHTML =
+    "<b>" + placed + "</b> student" + (placed === 1 ? "" : "s") +
+    " placed so far this session, across " + used + " table" + (used === 1 ? "" : "s") + ".";
 }
 
 function renderNames() {
@@ -915,6 +934,7 @@ function payload() {
     ta: device.ta,
     schema: 4,   // 4: groups identified by drawn card (R/B + A..9), not by number; groups_covered is now that card list
                  // 3: cohort_group added (Group 1/2 within a TC session), stopThinking moved from counts into scores
+                 // 5: stopThinking -> selfReliance, and the scale REVERSED so Above is the self-reliant end
     exported: new Date().toISOString(),
     blocks: Object.keys(blocks).sort().map(id => {
       const b = blocks[id];

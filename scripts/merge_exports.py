@@ -83,7 +83,7 @@ DEFAULT_EXPORTS_DIR = (
     / "HOFI26" / "Uploads"
 )
 
-RATING_KEYS = ["engagement", "collaboration", "stopThinking"]
+RATING_KEYS = ["engagement", "collaboration", "selfReliance"]
 
 
 RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9"]
@@ -288,7 +288,7 @@ def write_outputs(blocks, agreement, issues, chosen, roster, warnings, out_dir):
     with open(out_dir / "groups.csv", "w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["week", "half", "condition", "cohort_group", "group", "ta",
-                    "engagement", "collaboration", "stop_thinking", "progress",
+                    "engagement", "collaboration", "self_reliance", "progress",
                     "n_students", "n_flagged_no_part"])
         for b in blocks:
             for g in b["groups"]:
@@ -298,7 +298,9 @@ def write_outputs(blocks, agreement, issues, chosen, roster, warnings, out_dir):
                         g["group"], r["ta"],
                         r["scores"].get("engagement", ""),
                         r["scores"].get("collaboration", ""),
-                        r["scores"].get("stopThinking", ""),
+                        # schema <5 called this stopThinking and ran the scale the other way;
+                        # it is read here only so old exports still parse, never merged with new.
+                        r["scores"].get("selfReliance", r["scores"].get("stopThinking", "")),
                         r["progress"] or "",
                         len(r["students"]), len(r["no_part"]),
                     ])
