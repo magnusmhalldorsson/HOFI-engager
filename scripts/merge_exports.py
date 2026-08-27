@@ -118,7 +118,7 @@ def load_roster(path):
     return {s["id"]: s["name"] for s in data.get("students", [])}
 
 
-def pick_authoritative(files):
+def pick_authoritative(files, union=False):
     """One export per TA: the newest, since each export is a full snapshot.
 
     Warns if an older file for the same TA has a block the newest one lacks --
@@ -139,15 +139,35 @@ def pick_authoritative(files):
     for ta, entries in by_ta.items():
         entries.sort(key=lambda e: e[0], reverse=True)
         newest = entries[0]
-        chosen[ta] = {"path": newest[1], "data": newest[2]}
         newest_blocks = {b["block_id"] for b in newest[2]["blocks"]}
+
+        if union:
+            # One TA's blocks can end up split across two devices -- two phones, or
+            # one phone and a second browser -- and then no single export is complete.
+            # Union them, newest export winning any block recorded in more than one.
+            merged, source_of = {}, {}
+            for exported, path, data in reversed(entries):        # oldest first
+                for b in data["blocks"]:
+                    merged[b["block_id"]] = b
+                    source_of[b["block_id"]] = path
+            data = dict(newest[2]); data["blocks"] = [merged[k] for k in sorted(merged)]
+            extra = sorted(set(merged) - newest_blocks)
+            chosen[ta] = {"path": newest[1], "data": data,
+                          "union_of": sorted({str(p) for p in source_of.values()})}
+            if extra:
+                warnings.append(
+                    "{}: --union recovered block(s) {} that the newest export {} "
+                    "does not contain.".format(ta, extra, newest[1].name))
+            continue
+
+        chosen[ta] = {"path": newest[1], "data": newest[2]}
         for exported, path, data in entries[1:]:
             missing = {b["block_id"] for b in data["blocks"]} - newest_blocks
             if missing:
                 warnings.append(
                     "{}: {} has block(s) {} not present in the newer export {} "
-                    "for the same TA -- possible data loss, check by hand."
-                    .format(ta, path, sorted(missing), newest[1])
+                    "for the same TA -- possible data loss, check by hand. "
+                    "Re-run with --union to keep both.".format(ta, path, sorted(missing), newest[1])
                 )
 
     # Loose typo check across the TA names actually seen -- three real TAs
@@ -327,6 +347,9 @@ def main():
                     help="export JSON files, one per TA (default: everything "
                          "currently in the shared OneDrive Uploads folder)")
     ap.add_argument("--roster", default=str(DEFAULT_ROSTER), help="path to roster.json")
+    ap.add_argument("--union", action="store_true",
+                    help="keep every block a TA recorded, not just those in their newest "
+                         "export -- for when one TA's work is split across two devices")
     ap.add_argument("--out", default=str(DEFAULT_OUT), help="output directory")
     args = ap.parse_args()
 
@@ -345,7 +368,7 @@ def main():
             sys.exit("No .json files found in {}.".format(DEFAULT_EXPORTS_DIR))
 
     roster = load_roster(Path(args.roster))
-    chosen, load_warnings = pick_authoritative(paths)
+    chosen, load_warnings = pick_authoritative(paths, union=args.union)
     blocks, agreement, issues = merge(chosen, roster)
     write_outputs(blocks, agreement, issues, chosen, roster, load_warnings, Path(args.out))
 
