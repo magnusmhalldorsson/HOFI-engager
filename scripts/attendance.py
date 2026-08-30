@@ -68,6 +68,11 @@ def main() -> None:
     ap.add_argument("membership", nargs="?", type=Path, default=DEFAULT_IN)
     ap.add_argument("--roster", type=Path, default=DEFAULT_ROSTER)
     ap.add_argument("--out", type=Path, help="write CSV here (default: stdout summary only)")
+    ap.add_argument("--week", help="only this week, e.g. 2")
+    ap.add_argument("--half", choices=["AM","PM"],
+                    help="only this half-day. Use when attendance is taken from one "
+                         "block rather than the whole day -- e.g. week 2, where the "
+                         "morning was well covered and the afternoon was not.")
     ap.add_argument("--exclude-ids", nargs="*", default=[],
                     help="student ids to drop entirely, e.g. a mis-tap on a similar name")
     ap.add_argument("--canvas", type=Path, metavar="FILE",
@@ -90,6 +95,12 @@ def main() -> None:
         sys.exit(f"attendance: no such file: {a.membership} -- run merge_exports.py first")
 
     rows = list(csv.DictReader(a.membership.open(newline="", encoding="utf-8")))
+    if a.week:
+        rows = [r for r in rows if r["week"] == str(a.week)]
+    if a.half:
+        rows = [r for r in rows if r["half"] == a.half]
+    if not rows:
+        sys.exit(f"attendance: nothing left after --week/--half filter")
     excluded = set(a.exclude_ids)
     dropped = [r for r in rows if r["student_id"] in excluded]
     rows = [r for r in rows if r["student_id"] not in excluded]
@@ -118,7 +129,8 @@ def main() -> None:
         sys.exit("attendance: no rows found")
 
     # ---- report ----------------------------------------------------------
-    print(f"Attendance from {a.membership}")
+    scope = " ".join(x for x in [f"week {a.week}" if a.week else "", a.half or ""] if x)
+    print(f"Attendance from {a.membership}" + (f"   [{scope} only]" if scope else ""))
     print(f"Roster: {len(roster)} students\n")
 
     for k in half_keys:
