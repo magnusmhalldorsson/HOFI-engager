@@ -362,9 +362,12 @@ const COHORT_GROUPS = [
    each room draws independently, so with both rooms together there are two
    red aces. That is why cohort_group is part of the block identity. */
 const RANKS = ["A","2","3","4","5","6","7","8","9"];
+/* CARDS stays colour-major -- it drives the picker grid's two visual rows
+   (all reds, then all blacks). Group order (navigation, dots, summaries)
+   is rank-major instead, so ALL_CARDS -- not CARDS -- sets that order. */
 const CARDS = RANKS.map(r => ({ key:"R"+r, rank:r, colour:"red" }))
        .concat(RANKS.map(r => ({ key:"B"+r, rank:r, colour:"black" })));
-const ALL_CARDS = CARDS.map(c => c.key);
+const ALL_CARDS = RANKS.flatMap(r => ["R"+r, "B"+r]);
 const cardRank   = k => k.slice(1);
 const cardColour = k => (k[0] === "R" ? "red" : "black");
 const cardLabel  = k => cardColour(k) + " " + (cardRank(k) === "A" ? "ace" : cardRank(k));
