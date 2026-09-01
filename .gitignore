@@ -7,3 +7,8 @@ data/
 .DS_Store
 __pycache__/
 *.pyc
+
+# A roster is student data wherever it sits. data/ is already ignored; this catches
+# the copy that lands in the repo root when fetch_roster.py is run from elsewhere.
+# (data/roster.sample.json is invented names and stays tracked -- the rule misses it.)
+roster.json

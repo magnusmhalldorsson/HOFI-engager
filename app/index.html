@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>HOFI — Session Recorder</title>
+<!-- Installed to the Home Screen, this is a standalone web app rather than a Safari
+     tab. That matters for more than looks: iOS applies a 7-day eviction cap to
+     script-writable storage for ordinary sites, and every block not yet uploaded
+     lives in exactly that storage, on a course that runs weekly. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HOFI">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0e6e63">
 <style>
   :root {
     --ground:#e9ecea; --surface:#fff; --surface-2:#f2f5f3;
@@ -133,6 +144,13 @@
             padding:.55rem .7rem;background:var(--surface-2);font-size:.85rem;text-align:left;width:100%}
   .blockrow .grow{flex:1}
   .blockrow .cnt{font-size:.75rem;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+  /* Upload state of one session. "Not uploaded" has to read as a warning at a glance,
+     because it is the state a TA must act on before leaving the room. */
+  .sent{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+        border-radius:4px;padding:.15rem .35rem;white-space:nowrap}
+  .sent.no{background:var(--alert-soft);color:var(--alert)}
+  .sent.stale{background:var(--alert-soft);color:var(--alert)}
+  .sent.yes{background:var(--teal-soft);color:var(--teal)}
   .hidden{display:none}
   .note{font-size:.78rem;color:var(--ink-faint)}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -173,6 +191,8 @@
     <h2>Which session?</h2>
     <p class="sub">One record per Thinking Lab session: a week, a half-day, and which pedagogy ran.
        Who was in the room is whoever gets tapped in on the next screen.</p>
+
+    <div id="sentbanner" class="hidden"></div>
 
     <label for="bweek">Week</label>
     <input type="number" id="bweek" min="1" max="12" value="1">
@@ -263,8 +283,9 @@
   <div id="summary" class="panel hidden">
     <h2>Upload</h2>
     <p class="sub">Sends every session recorded on this phone. On a phone this opens the
-       share sheet — pick OneDrive, then the shared HOFI folder. On a computer it
-       downloads a file instead.</p>
+       share sheet — <b>AirDrop to Magnús if he is in the room</b>, otherwise pick OneDrive
+       and the shared HOFI folder. On a computer it downloads a file instead.
+       Sending the same thing twice is harmless.</p>
     <div class="stat-row">
       <div class="stat"><b id="sBlocks">0</b><span>sessions</span></div>
       <div class="stat"><b id="sGroups">0</b><span>groups done</span></div>
@@ -374,7 +395,7 @@ const cardLabel  = k => cardColour(k) + " " + (cardRank(k) === "A" ? "ace" : car
 /* ------------------------------------------------------------------------ */
 
 const K = { roster:"hofi.roster", device:"hofi.device", blocks:"hofi.blocks", draft:"hofi.draft",
-            alloc:"hofi.alloc" };
+            alloc:"hofi.alloc", sent:"hofi.sent" };
 const el = id => document.getElementById(id);
 const read = (k, fb) => { try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch (e) { return fb; } };
 const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
@@ -389,6 +410,13 @@ let blocks = read(K.blocks, {});          // blockId -> block record
    before. It is shown to be confirmed against, never auto-selected -- a wrong cohort
    group silently creates the wrong block, so this must not guess on the TA's behalf. */
 let alloc = read(K.alloc, null);
+/* What this phone has handed off, and what it looked like at the time:
+   { at: ISO, blocks: { block_id: fingerprint } }. Recorded so the app can say
+   which sessions are still only on the phone -- in week 2 a TA believed a whole
+   session had been lost when it was sitting in local storage the entire time,
+   and nothing in the app could tell them otherwise. Note the honest limit: this
+   records that the file was handed to the share sheet, NOT that it arrived. */
+let sent = read(K.sent, null);
 let draft  = read(K.draft, { week:1, half:"AM", condition:null, group:null, cards:ALL_CARDS.slice() });
 let curId  = null;                         // block currently open
 let showAllNames = false;                  // picker filter override; reset when the block changes
@@ -498,8 +526,8 @@ el("setupDone").onclick = () => {
 
 el("wipe").onclick = () => {
   if (!confirm("Erase the roster and every recorded block on this phone?")) return;
-  [K.roster, K.device, K.blocks, K.draft].forEach(k => localStorage.removeItem(k));
-  roster = null; device = null; blocks = {}; curId = null;
+  [K.roster, K.device, K.blocks, K.draft, K.sent].forEach(k => localStorage.removeItem(k));
+  roster = null; device = null; blocks = {}; curId = null; sent = null;
   draft = { week:1, half:"AM", condition:null, group:null, cards:ALL_CARDS.slice() };
   renderRosterState();
   alert("Erased.");
@@ -552,6 +580,8 @@ function renderChooser() {
   if (showGroup) renderAllocNote();
   renderCardGrid();
 
+  renderSentBanner();
+
   const ids = Object.keys(blocks).sort().reverse();
   const box = el("recent");
   box.innerHTML = "";
@@ -571,7 +601,7 @@ function renderChooser() {
     lab.className = "grow"; lab.textContent = blockLabel(b);
     const cnt = document.createElement("span");
     cnt.className = "cnt"; cnt.textContent = done + "/" + groupKeys(b).length;
-    row.appendChild(lab); row.appendChild(cnt);
+    row.appendChild(lab); row.appendChild(sentBadge(id)); row.appendChild(cnt);
     row.onclick = () => { curId = id; showAllNames = false; show("main"); renderAll(); };
     list.appendChild(row);
   });
@@ -931,6 +961,31 @@ el("search").oninput = renderNames;
 
 /* ---------------- summary & export ---------------- */
 
+/* One block, in exactly the shape it takes in an export. Split out of payload() so
+   the upload receipt below fingerprints the same bytes that actually get sent --
+   two definitions of "what is in an export" would drift, and a receipt that drifts
+   is worse than none. */
+function blockPayload(id) {
+  const b = blocks[id];
+  const present = assignedIn(b);
+  return {
+    block_id: id,
+    week: b.week, half: b.half, condition: b.condition, cohort_group: b.group || null,
+    ta: b.ta, groups_covered: groupKeys(b),
+    groups: groupKeys(b)
+      .filter(n => b.groups[n] &&
+        (b.groups[n].students.length || Object.keys(b.groups[n].scores).length))
+      .map(n => ({
+        group: n,
+        students: b.groups[n].students,
+        no_part: Object.keys(b.groups[n].flags),
+        scores: b.groups[n].scores,
+        progress: b.groups[n].progress
+      })),
+    not_seen: students().map(s => s.id).filter(id => !present.has(id))
+  };
+}
+
 function payload() {
   return {
     course: (roster && roster.course) || "HOFI",
@@ -939,27 +994,85 @@ function payload() {
                  // 3: cohort_group added (Group 1/2 within a TC session), stopThinking moved from counts into scores
                  // 5: stopThinking -> selfReliance, and the scale REVERSED so Above is the self-reliant end
     exported: new Date().toISOString(),
-    blocks: Object.keys(blocks).sort().map(id => {
-      const b = blocks[id];
-      const present = assignedIn(b);
-      return {
-        block_id: id,
-        week: b.week, half: b.half, condition: b.condition, cohort_group: b.group || null,
-        ta: b.ta, groups_covered: groupKeys(b),
-        groups: groupKeys(b)
-          .filter(n => b.groups[n] &&
-            (b.groups[n].students.length || Object.keys(b.groups[n].scores).length))
-          .map(n => ({
-            group: n,
-            students: b.groups[n].students,
-            no_part: Object.keys(b.groups[n].flags),
-            scores: b.groups[n].scores,
-            progress: b.groups[n].progress
-          })),
-        not_seen: students().map(s => s.id).filter(id => !present.has(id))
-      };
-    })
+    blocks: Object.keys(blocks).sort().map(blockPayload)
   };
+}
+
+/* ---------------- upload receipt ---------------- */
+
+/* A cheap content hash (djb2, xor variant) over the block's exported form. Length is
+   appended because a 32-bit hash alone collides more often than is comfortable for
+   something a TA trusts. Not cryptographic and does not need to be: the only thing
+   being detected is "has this changed since I sent it", by the same device. */
+function fingerprint(id) {
+  const s = JSON.stringify(blockPayload(id));
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36) + "." + s.length;
+}
+
+/* "no" = never uploaded, "stale" = uploaded then changed, "yes" = uploaded as it stands. */
+function sentState(id) {
+  if (!sent || !sent.blocks || !(id in sent.blocks)) return "no";
+  return sent.blocks[id] === fingerprint(id) ? "yes" : "stale";
+}
+
+const SENT_LABEL = { no:"Not uploaded", stale:"Changed since upload", yes:"Uploaded" };
+
+const pendingIds = () => Object.keys(blocks).filter(id => sentState(id) !== "yes");
+
+function recordExport() {
+  const map = {};
+  Object.keys(blocks).forEach(id => { map[id] = fingerprint(id); });
+  sent = { at: new Date().toISOString(), blocks: map };
+  write(K.sent, sent);
+}
+
+function ago(iso) {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (!isFinite(mins) || mins < 0) return "just now";
+  if (mins < 1) return "just now";
+  if (mins < 60) return mins + (mins === 1 ? " minute ago" : " minutes ago");
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + (hrs === 1 ? " hour ago" : " hours ago");
+  const days = Math.floor(hrs / 24);
+  return days + (days === 1 ? " day ago" : " days ago");
+}
+
+/* A small badge naming one block's upload state, for the two block lists. */
+function sentBadge(id) {
+  const st = sentState(id);
+  const s = document.createElement("span");
+  s.className = "sent " + st;
+  s.textContent = SENT_LABEL[st];
+  return s;
+}
+
+function renderSentBanner() {
+  const box = el("sentbanner");
+  const ids = Object.keys(blocks);
+  box.innerHTML = "";
+  if (!ids.length) { box.className = "hidden"; return; }
+
+  const pending = pendingIds();
+  const line = document.createElement("div");
+  if (pending.length) {
+    box.className = "warn";
+    line.innerHTML = "<b>" + pending.length + " session" + (pending.length === 1 ? "" : "s") +
+      " not yet uploaded.</b> Upload before you leave the room.";
+  } else {
+    box.className = "ok";
+    line.innerHTML = "<b>All " + ids.length + " session" + (ids.length === 1 ? "" : "s") +
+      " uploaded</b>, " + ago(sent.at) + ".";
+  }
+  box.appendChild(line);
+
+  const note = document.createElement("div");
+  note.className = "note";
+  note.style.marginTop = ".3rem";
+  note.textContent = "This records that you sent the file, not that it arrived. "
+                   + "If you are unsure, check the folder or send it again — sending twice is harmless.";
+  box.appendChild(note);
 }
 
 function problems() {
@@ -1016,7 +1129,7 @@ function openSummary() {
     const lab = document.createElement("span"); lab.className = "grow"; lab.textContent = blockLabel(b);
     const cnt = document.createElement("span"); cnt.className = "cnt";
     cnt.textContent = n + "/" + groupKeys(b).length;
-    row.appendChild(lab); row.appendChild(cnt);
+    row.appendChild(lab); row.appendChild(sentBadge(id)); row.appendChild(cnt);
     list.appendChild(row);
   });
   box.appendChild(list);
@@ -1053,13 +1166,21 @@ el("exportBtn").onclick = async () => {
     const file = new File([json], name, { type: "application/json" });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title: name });
+      // Resolving means the TA picked a destination. It is NOT proof the file reached
+      // OneDrive, which is why the banner says "you sent it", not "it arrived".
+      recordExport();
+      openSummary();
       return;
     }
   } catch (err) {
-    if (err && err.name === "AbortError") return;   // TA cancelled the share sheet
+    // A cancelled share sheet must not count as an upload -- recording one here would
+    // tell a TA their work is safe at the exact moment it is not.
+    if (err && err.name === "AbortError") return;
     // Any other failure (unsupported target, etc.) -- fall through to download.
   }
   downloadFallback(json, name);
+  recordExport();
+  openSummary();
 };
 
 el("back").onclick = () => { if (curId) { show("main"); renderAll(); } else openChooser(); };
@@ -1068,6 +1189,14 @@ el("back").onclick = () => { if (curId) { show("main"); renderAll(); } else open
 
 renderRosterState();
 if (roster && device) openChooser(); else show("setup");
+
+/* Offline shell. Guarded because a service worker needs a secure origin -- opening
+   index.html straight off disk for a quick look must not throw. */
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
 </script>
 </body>
 </html>

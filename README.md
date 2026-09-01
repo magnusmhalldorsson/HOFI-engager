@@ -141,6 +141,19 @@ session selection, every time, for the rest of the semester. A student who
 drops out is not removed; they simply stop being tapped into any session,
 which is exactly how their absence should read.
 
+**Add it to the Home Screen first, then load the roster.** Not cosmetic: iOS
+applies a seven-day eviction cap to script-writable storage for ordinary
+sites, and every block not yet uploaded lives in exactly that storage, on a
+course that meets weekly. A Home-Screen web app is exempt. Do this *before*
+loading the roster, because on iOS the installed app has historically had its
+own storage container — install afterwards and the roster and every recorded
+session can appear to have vanished. An existing phone should therefore
+export, install, and then load the roster again.
+
+The app also carries a small service worker, so it opens with no network at
+all. Recording is entirely local; having the page itself fail to load in a
+room with bad Wi-Fi was a pure loss.
+
 1. Students draw cards; **the card is the group's name** — recorded as drawn,
    not translated into anything. See *How a group is named* below.
 2. **Select the session** — week, half-day, pedagogy, and which cards are in
@@ -170,12 +183,30 @@ which is exactly how their absence should read.
    three ratings, and a progress mark; a small counter under the dots tracks
    how many are done, and a checkmark appears next to the group number itself
    once the one you're on is complete.
-8. **After the session, upload.** On a phone this hands the file to the OS
-   share sheet — the TA picks OneDrive, then the shared HOFI folder. On a
-   computer (or any browser that can't share files) it downloads a file
-   instead, for AirDrop or mail as a fallback. Either way it uploads
-   *everything currently on the phone*, not just what's new — see the merge
-   step below for why that's the right behaviour, not a bug.
+8. **After the session, upload — before leaving the room.** On a phone this
+   hands the file to the OS share sheet. **AirDrop to Magnús's laptop if he is
+   there**; otherwise pick OneDrive and the shared HOFI folder. On a computer
+   (or any browser that can't share files) it downloads a file instead. Either
+   way it uploads *everything currently on the phone*, not just what's new —
+   see the merge step below for why that's the right behaviour, not a bug.
+   Sending the same thing twice is harmless, so when in doubt, send again.
+
+   AirDrop is preferred because the failure is then discovered in the ten
+   seconds when it can still be fixed, rather than three days later.
+   `collect_exports.py` files hand-delivered exports; nothing is lost by not
+   going through OneDrive.
+
+9. **The app says what it has sent.** Opening it shows either *"N sessions not
+   yet uploaded"* or *"All N sessions uploaded, 12 minutes ago"*, and each
+   session in the list is marked **Not uploaded**, **Changed since upload**, or
+   **Uploaded**. A session edited after being sent goes back to needing an
+   upload, so the marker tracks the content rather than just the act.
+
+   Read the limit honestly: this records that the file reached the share
+   sheet, **not that it arrived**. A cancelled share sheet correctly counts as
+   nothing sent. It exists because in week 2 a TA believed a whole session had
+   been lost when it had been sitting in local storage the entire time, and
+   nothing in the app could say so.
 
 The Group-1/Group-2 filter only knows what is on **this** phone. If a second
 TA covers the paired group on a different device, this phone has no way to

@@ -1,0 +1,14 @@
+{
+  "name": "HOFI — Session Recorder",
+  "short_name": "HOFI",
+  "description": "Records Thinking Lab attendance and group measures on a TA's phone. Everything stays on the device until it is uploaded.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e9ecea",
+  "theme_color": "#0e6e63",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}
