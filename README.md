@@ -291,6 +291,29 @@ pairwise agreement between the three ratings as an early halo check — see
 *HOFI Measurement Plan* on why two same-format ratings from one observer
 correlating too highly is itself a finding, not just noise.
 
+**Groups and students are counted distinctly, ratings separately.**
+`groups.csv` holds one row per *(group × TA)*, so on a calibration day — both
+TAs deliberately rating the same groups — naively summing the rows counts every
+group and every student twice. In week 3 that produced a report claiming 119
+students in one PM session, on a 94-student roster. The block lines therefore
+report distinct groups and distinct students, with the row count shown beside
+them as *ratings*, since that is the denominator the agreement figures use.
+
+Distinct student counts need `membership.csv`, which is read from alongside
+`groups.csv`; without it the count falls back to the largest headcount any one
+TA logged per group, and the report says so rather than passing the estimate
+off as exact.
+
+A **Half-days** section gives the distinct students recorded per half-day.
+That is the figure to quote as "how many were in the room". Adding G1 and G2
+is not: they are the two complementary halves of one Thinking-Lab population.
+
+The **Flags** section reads `blocks.json` as well, so `merge_exports.py`'s own
+findings — two TAs logging different progress for one group, a student in two
+groups — appear here instead of sitting unread in the merge output. If
+`blocks.json` is missing, the report says that it cannot see them rather than
+printing *none*.
+
 This is a sanity check meant to run after every weekly merge, not the
 analysis. No weighted kappa, no model — both are noted as still open in
 `merge_exports.py`'s own docstring, and belong in whatever stats environment
