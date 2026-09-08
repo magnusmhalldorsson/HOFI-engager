@@ -21,6 +21,27 @@ data held at an EEA institution, so the fewer places they exist the better.
 Code can live anywhere; the data lives here and in RU's OneDrive, and nowhere
 else. Nothing syncs student data to a personal account by accident.
 
+## The scripts
+
+Everything lives in `scripts/`, standard library only, run from the repo root.
+Each one explains itself with `--help`, and its docstring carries the reasoning
+the flags cannot.
+
+| | |
+|---|---|
+| `fetch_roster.py` | pull the roster from Canvas → `data/roster.json`; also `check` and `courses` |
+| `collect_exports.py` | gather the TAs' exports from the shared OneDrive folder |
+| `merge_exports.py` | merge those into `data/merged/` — the canonical per-block record |
+| `summarize.py` | plain-text report over the merged data: coverage, distributions, agreement |
+| `attendance.py` | per-student attendance for a teaching day, and its Canvas import CSV |
+| `takeaway_grades.py` | Canvas import CSV for a week's Takeaway Task: full marks for submitting |
+| `make_allocation.py` | draw the groups |
+
+The two that write files for Canvas — `attendance.py` and `takeaway_grades.py`
+— produce a CSV for you to look at and then upload by hand at
+**Canvas > Grades > Import**. Neither writes a grade over the API, because a
+grade is student-visible the moment it posts.
+
 ## Setup
 
 **Every command below runs from the repo root**, `~/Projects/hofi-engagement`.
@@ -321,6 +342,52 @@ the real analysis runs in, using `groups.csv` as the input.
 
 Pass a different CSV path as an argument to summarize something other than
 the default merged output.
+
+## Grading a Takeaway Task
+
+```sh
+python3 scripts/takeaway_grades.py --week 2
+```
+
+Reads the week's assignment and its submissions from Canvas, and writes
+`data/canvas-takeaway-w02.csv` — full marks for every student who handed
+something in. Upload it at **Canvas > Grades > Import**.
+
+The mark is for submitting, not for the answer. Per *HOFI Dessert Design* the
+second question of every Takeaway is the meta-skill question — disclose which
+AI you used, say where it was wrong — and that only produces honest answers if
+answering honestly is free. The answers are read in aggregate and summarised
+back to the room; they are not scored.
+
+Everything the rule cannot decide is printed rather than guessed at:
+submissions that were late but scored anyway, submissions small enough to be
+worth opening (`--thin`), and anyone enrolled with no submission record at all.
+Read that report, then import.
+
+The Takeaway assignments post grades **manually**, so an import is invisible to
+students until you post the column: Grades → the column's menu → *Post grades*.
+The script says so when that is the case.
+
+**A student the script does not grade is left out of the file, not left
+blank.** An empty cell in a Canvas import is *not* a no-op: against an existing
+grade Canvas reads it as a change to no grade and deletes it. That happened
+here on 8 September 2026 — an import whose only empty cells were four students
+already graded 100 wiped those four grades, after they had been posted. So the
+file contains a row only for a student who is getting a mark, and a student who
+is not in the file is not touched.
+
+Students already graded are therefore absent from it, and so is anyone who did
+not submit. Pass `--absent zero` to write zeros for non-submitters once a
+deadline is properly closed and the total needs to be honest — but not while
+late work is still arriving. `--regrade` includes the already-graded,
+overwriting and re-posting what they have.
+
+Only `Student` and `ID` are filled in by default — Canvas matches on `ID`
+alone, and this repo asks Canvas for the fields it needs and no more. Pass
+`--template` with a gradebook CSV exported from Canvas to copy all five
+identity columns and Canvas's own row order verbatim. The roster always comes
+from the API either way, so a student who enrolled or left since that export is
+still handled correctly.
 
 ## Two records, one session
 
