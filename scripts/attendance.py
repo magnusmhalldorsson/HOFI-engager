@@ -63,6 +63,58 @@ def load_roster(path: Path) -> list[dict]:
     return [{"id": str(s["id"]), "name": s.get("name", "")} for s in students]
 
 
+def write_canvas(path: Path, roster: list[dict], score_of, *, template: Path | None,
+                 assignment: str, assignment_id: str | None, points: str) -> None:
+    """Write a Canvas gradebook import CSV with one score column.
+
+    score_of(student_id) -> the string to put in the cell. Shared with
+    combine_attendance.py, which scores 0 / 0.5 / 1 rather than 0 / 1.
+
+    Canvas matches students on the ID column, which is the Canvas user id --
+    the same id fetch_roster.py stores, so no name matching is needed and the
+    mojibake that afflicts Icelandic names in Canvas exports never arises.
+    """
+    header = f"{assignment} ({assignment_id})" if assignment_id else assignment
+    path.parent.mkdir(parents=True, exist_ok=True)
+    known = {s["id"] for s in roster}
+
+    if template:
+        # Copy identity columns straight out of Canvas's own export. Canvas matches
+        # on ID, but carrying Student/SIS/Section through unchanged means the file
+        # cannot disagree with Canvas about who is enrolled, and it makes the import
+        # preview readable. The Test Student is Canvas's own fixture, never a person.
+        src = list(csv.reader(template.open(newline="", encoding="utf-8")))
+        ident = src[0][:5]
+        body = [r for r in src[2:] if r and r[1].strip() and "student, Test" not in r[0]]
+        skipped = [r for r in src[2:] if r and "student, Test" in r[0]]
+        missing = [r for r in body if r[1] not in known]
+        with path.open("w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(ident + [header])
+            w.writerow(["    Points Possible", "", "", "", "", points])
+            for r in body:
+                w.writerow(r[:5] + [score_of(r[1]) if r[1] in known else "0"])
+        print(f"Wrote {path}  ({len(body)} students, from Canvas export)")
+        if skipped:
+            print(f"  dropped Canvas Test Student ({len(skipped)} row)")
+        if missing:
+            print(f"  ! {len(missing)} in Canvas but not on our roster -- scored 0:")
+            for r in missing:
+                print(f"      {r[1]}  {r[0]}")
+    else:
+        with path.open("w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["Student", "ID", "SIS User ID", "SIS Login ID", "Section", header])
+            w.writerow(["    Points Possible", "", "", "", "", points])
+            for s in sorted(roster, key=lambda x: x["name"]):
+                w.writerow([s["name"], s["id"], "", "", "", score_of(s["id"])])
+        print(f"Wrote {path}  (Canvas gradebook import)")
+    if not assignment_id:
+        print("  ! No --assignment-id given. Canvas will CREATE A NEW assignment"
+              f"\n    called {assignment!r} instead of filling the existing one."
+              "\n    Get the id from the assignment URL and re-run before importing.")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("membership", nargs="?", type=Path, default=DEFAULT_IN)
@@ -183,51 +235,10 @@ def main() -> None:
         print(f"\nWrote {a.out}")
 
     # ---- canvas gradebook import ----------------------------------------
-    # Canvas matches students on the ID column, which is the Canvas user id --
-    # the same id fetch_roster.py stores, so no name matching is needed and the
-    # mojibake that afflicts Icelandic names in Canvas exports never arises.
     if a.canvas:
-        header = a.assignment
-        if a.assignment_id:
-            header = f"{a.assignment} ({a.assignment_id})"
-        a.canvas.parent.mkdir(parents=True, exist_ok=True)
-
-        if a.canvas_template:
-            # Copy identity columns straight out of Canvas's own export. Canvas matches
-            # on ID, but carrying Student/SIS/Section through unchanged means the file
-            # cannot disagree with Canvas about who is enrolled, and it makes the import
-            # preview readable. The Test Student is Canvas's own fixture, never a person.
-            src = list(csv.reader(a.canvas_template.open(newline="", encoding="utf-8")))
-            ident = src[0][:5]
-            body = [r for r in src[2:] if r and r[1].strip() and "student, Test" not in r[0]]
-            skipped = [r for r in src[2:] if r and "student, Test" in r[0]]
-            missing = [r for r in body if r[1] not in {s["id"] for s in roster}]
-            with a.canvas.open("w", newline="", encoding="utf-8") as f:
-                w = csv.writer(f)
-                w.writerow(ident + [header])
-                w.writerow(["    Points Possible", "", "", "", "", a.points])
-                for r in body:
-                    w.writerow(r[:5] + [a.points if r[1] in seen_any else "0"])
-            print(f"Wrote {a.canvas}  ({len(body)} students, from Canvas export)")
-            if skipped:
-                print(f"  dropped Canvas Test Student ({len(skipped)} row)")
-            if missing:
-                print(f"  ! {len(missing)} in Canvas but not on our roster -- scored 0:")
-                for r in missing:
-                    print(f"      {r[1]}  {r[0]}")
-        else:
-            with a.canvas.open("w", newline="", encoding="utf-8") as f:
-                w = csv.writer(f)
-                w.writerow(["Student", "ID", "SIS User ID", "SIS Login ID", "Section", header])
-                w.writerow(["    Points Possible", "", "", "", "", a.points])
-                for s in sorted(roster, key=lambda x: x["name"]):
-                    score = a.points if s["id"] in seen_any else "0"
-                    w.writerow([s["name"], s["id"], "", "", "", score])
-            print(f"Wrote {a.canvas}  (Canvas gradebook import)")
-        if not a.assignment_id:
-            print("  ! No --assignment-id given. Canvas will CREATE A NEW assignment"
-                  f"\n    called {a.assignment!r} instead of filling the existing one."
-                  "\n    Get the id from the assignment URL and re-run before importing.")
+        write_canvas(a.canvas, roster, lambda sid: a.points if sid in seen_any else "0",
+                     template=a.canvas_template, assignment=a.assignment,
+                     assignment_id=a.assignment_id, points=a.points)
 
 
 if __name__ == "__main__":
