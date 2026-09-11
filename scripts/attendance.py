@@ -55,6 +55,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_IN = ROOT / "data" / "merged" / "membership.csv"
 DEFAULT_ROSTER = ROOT / "data" / "roster.json"
+DEFAULT_ELSEWHERE = ROOT / "data" / "graded-elsewhere.txt"
 
 
 def load_roster(path: Path) -> list[dict]:
@@ -63,8 +64,33 @@ def load_roster(path: Path) -> list[dict]:
     return [{"id": str(s["id"]), "name": s.get("name", "")} for s in students]
 
 
+def load_graded_elsewhere(path: Path | None) -> dict[str, str]:
+    """Students whose participation is graded by hand, by someone else.
+
+    One Canvas id per line, optionally followed by whitespace and the name;
+    '#' starts a comment. Returns {id: name}. A missing file means nobody.
+
+    The Akureyri cohort is the case: Óli records their attendance there and
+    enters their grades himself. They are on the roster (see fetch_roster.py:
+    everyone is, on purpose) and never appear in a Reykjavík block, so without
+    this list every import would score them 0 -- and an import that scores a
+    student 0 overwrites the 1 Óli has already entered.
+    """
+    if not path or not path.exists():
+        return {}
+    out: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        sid, _, name = line.partition(" ")
+        out[sid.strip()] = name.strip()
+    return out
+
+
 def write_canvas(path: Path, roster: list[dict], score_of, *, template: Path | None,
-                 assignment: str, assignment_id: str | None, points: str) -> None:
+                 assignment: str, assignment_id: str | None, points: str,
+                 omit: dict[str, str] | None = None) -> None:
     """Write a Canvas gradebook import CSV with one score column.
 
     score_of(student_id) -> the string to put in the cell. Shared with
@@ -73,10 +99,18 @@ def write_canvas(path: Path, roster: list[dict], score_of, *, template: Path | N
     Canvas matches students on the ID column, which is the Canvas user id --
     the same id fetch_roster.py stores, so no name matching is needed and the
     mojibake that afflicts Icelandic names in Canvas exports never arises.
+
+    A student in `omit` gets NO ROW, not a blank cell. An empty cell in a
+    Canvas import is not a no-op: against an existing grade it reads as a
+    change to no grade, and Canvas applies it (see takeaway_grades.py for the
+    day that was learned). Leaving the row out is the only form Canvas cannot
+    misread, and it is what "leave their grade untouched" has to mean.
     """
     header = f"{assignment} ({assignment_id})" if assignment_id else assignment
     path.parent.mkdir(parents=True, exist_ok=True)
     known = {s["id"] for s in roster}
+    omit = omit or {}
+    left_out: list[tuple[str, str]] = []
 
     if template:
         # Copy identity columns straight out of Canvas's own export. Canvas matches
@@ -93,8 +127,11 @@ def write_canvas(path: Path, roster: list[dict], score_of, *, template: Path | N
             w.writerow(ident + [header])
             w.writerow(["    Points Possible", "", "", "", "", points])
             for r in body:
+                if r[1] in omit:
+                    left_out.append((r[1], r[0]))
+                    continue
                 w.writerow(r[:5] + [score_of(r[1]) if r[1] in known else "0"])
-        print(f"Wrote {path}  ({len(body)} students, from Canvas export)")
+        print(f"Wrote {path}  ({len(body) - len(left_out)} students, from Canvas export)")
         if skipped:
             print(f"  dropped Canvas Test Student ({len(skipped)} row)")
         if missing:
@@ -107,8 +144,23 @@ def write_canvas(path: Path, roster: list[dict], score_of, *, template: Path | N
             w.writerow(["Student", "ID", "SIS User ID", "SIS Login ID", "Section", header])
             w.writerow(["    Points Possible", "", "", "", "", points])
             for s in sorted(roster, key=lambda x: x["name"]):
+                if s["id"] in omit:
+                    left_out.append((s["id"], s["name"]))
+                    continue
                 w.writerow([s["name"], s["id"], "", "", "", score_of(s["id"])])
         print(f"Wrote {path}  (Canvas gradebook import)")
+    if left_out:
+        print(f"  left OUT of the file, grade untouched -- graded by hand elsewhere"
+              f" ({len(left_out)}):")
+        for sid, name in sorted(left_out, key=lambda x: x[1]):
+            print(f"      {sid}  {name}")
+    unseen = [(sid, name) for sid, name in omit.items()
+              if sid not in {i for i, _ in left_out}]
+    if unseen:
+        print(f"  ! {len(unseen)} on the graded-elsewhere list but not in this file's"
+              " roster (dropped the course, or a wrong id?):")
+        for sid, name in unseen:
+            print(f"      {sid}  {name}")
     if not assignment_id:
         print("  ! No --assignment-id given. Canvas will CREATE A NEW assignment"
               f"\n    called {assignment!r} instead of filling the existing one."
@@ -139,6 +191,10 @@ def main() -> None:
                     help="Canvas assignment id. WITHOUT this, Canvas CREATES A NEW "
                          "assignment on import rather than filling the existing one. "
                          "Find it in the assignment's URL: /assignments/<id>")
+    ap.add_argument("--graded-elsewhere", type=Path, default=DEFAULT_ELSEWHERE, metavar="FILE",
+                    help="students graded by hand by someone else (Akureyri); their rows "
+                         "are LEFT OUT of the Canvas file so their grade is untouched "
+                         f"(default {DEFAULT_ELSEWHERE.relative_to(ROOT)} if it exists)")
     ap.add_argument("--points", default="1",
                     help="value written for a present student (default 1); absent gets 0")
     a = ap.parse_args()
@@ -238,7 +294,8 @@ def main() -> None:
     if a.canvas:
         write_canvas(a.canvas, roster, lambda sid: a.points if sid in seen_any else "0",
                      template=a.canvas_template, assignment=a.assignment,
-                     assignment_id=a.assignment_id, points=a.points)
+                     assignment_id=a.assignment_id, points=a.points,
+                     omit=load_graded_elsewhere(a.graded_elsewhere))
 
 
 if __name__ == "__main__":

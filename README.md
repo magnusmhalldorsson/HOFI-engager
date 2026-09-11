@@ -115,6 +115,18 @@ attends a Reykjavík session simply never appears in any block's data. There is
 nothing to exclude in advance, and so nothing that can go stale or need
 maintaining.
 
+**One exception, for grading only.** The Akureyri cohort is on the roster like
+everyone else and never appears in a Reykjavík block, so every Canvas import
+would score them 0 — and Óli, who records their attendance there, enters their
+participation grades by hand. `data/graded-elsewhere.txt` lists them (Canvas id
+and name, one per line, gitignored like the rest of `data/`), and both
+`attendance.py` and `combine_attendance.py` leave those students **out of the
+import file entirely**. Not a blank cell: Canvas reads an empty cell against an
+existing grade as "change to no grade" and deletes it (see `takeaway_grades.py`
+for the day that was learned). Omitting the row is the only form that leaves a
+grade untouched. The list is read automatically when the file exists; every run
+prints who was left out, so it never applies silently.
+
 ### There is deliberately no section per student, either
 
 *Which* students end up in the room together is redrawn weekly and can change

@@ -53,7 +53,8 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from attendance import load_roster, write_canvas  # noqa: E402
+from attendance import (DEFAULT_ELSEWHERE, load_graded_elsewhere,  # noqa: E402
+                        load_roster, write_canvas)
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -85,6 +86,10 @@ def main() -> None:
     ap.add_argument("--assignment", default="Participation")
     ap.add_argument("--assignment-id", default=None,
                     help="Canvas assignment id; without it Canvas creates a new assignment")
+    ap.add_argument("--graded-elsewhere", type=Path, default=DEFAULT_ELSEWHERE, metavar="FILE",
+                    help="students graded by hand by someone else (Akureyri); their rows "
+                         "are LEFT OUT of the Canvas file so their grade is untouched "
+                         f"(default {DEFAULT_ELSEWHERE.relative_to(ROOT)} if it exists)")
     a = ap.parse_args()
 
     wk = str(a.week).lstrip("0") or "0"
@@ -96,6 +101,7 @@ def main() -> None:
 
     roster = load_roster(a.roster)
     by_norm = {norm(s["name"]): s for s in roster}
+    elsewhere = load_graded_elsewhere(a.graded_elsewhere)
     am_key, pm_key = f"w{wk}-AM", f"w{wk}-PM"
 
     # ---- challenge lab (ids) ------------------------------------------
@@ -139,7 +145,7 @@ def main() -> None:
             sk_am.add(s["id"])
         if t_pm:
             sk_pm.add(s["id"])
-    no_row = [s for s in roster if norm(s["name"]) not in seen_norms]
+    no_row = [s for s in roster if norm(s["name"]) not in seen_norms and s["id"] not in elsewhere]
 
     # ---- score ---------------------------------------------------------
     half_am = ch_am & sk_am
@@ -151,13 +157,17 @@ def main() -> None:
     print(f"Combined participation, week {wk}")
     print(f"  Challenge Lab: {att_path}   Skill Lab: {a.skill_lab}")
     print(f"  Roster {len(roster)}; sheet rows {len(sheet_rows)}; tick marks used: "
-          + ", ".join(repr(v) for v in sorted(ticked) if v) + "\n")
+          + ", ".join(repr(v) for v in sorted(ticked) if v))
+    if elsewhere:
+        print(f"  {len(elsewhere)} graded elsewhere ({a.graded_elsewhere.name}), not scored here")
+    print()
 
     print(f"  {'':14s}{'Challenge':>10s}{'Skill':>8s}{'both':>8s}")
     print(f"  {'AM':14s}{len(ch_am):>10d}{len(sk_am):>8d}{len(half_am):>8d}")
     print(f"  {'PM':14s}{len(ch_pm):>10d}{len(sk_pm):>8d}{len(half_pm):>8d}")
-    dist = Counter(score.values())
-    print(f"\n  score 1: {dist.get(1.0, 0)}   score 0.5: {dist.get(0.5, 0)}   score 0: {dist.get(0, 0)}")
+    dist = Counter(v for sid, v in score.items() if sid not in elsewhere)
+    print(f"\n  score 1: {dist.get(1.0, 0)}   score 0.5: {dist.get(0.5, 0)}   score 0: {dist.get(0, 0)}"
+          + (f"   (+{len(elsewhere)} graded elsewhere, not in the Canvas file)" if elsewhere else ""))
 
     problems = 0
     print("\nName matching")
@@ -229,7 +239,8 @@ def main() -> None:
     if a.canvas:
         write_canvas(a.canvas, roster, lambda sid: f"{score.get(sid, 0):g}",
                      template=a.canvas_template, assignment=a.assignment,
-                     assignment_id=a.assignment_id, points="1")
+                     assignment_id=a.assignment_id, points="1",
+                     omit=load_graded_elsewhere(a.graded_elsewhere))
     if problems:
         print(f"\n  {problems} problem(s) above change someone's score. Fix the sheet and re-run"
               " before importing.")
