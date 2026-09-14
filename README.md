@@ -198,13 +198,32 @@ room with bad Wi-Fi was a pure loss.
    engagement and collaboration, mark how far the group got, and rate how
    often they asked to be told rather than checking their own thinking.
    **No network needed.**
-4. **Group 2's picker defaults to showing only students not already recorded
-   in Group 1** that same TC half-day — normally exactly who's left, since the
-   two groups between them cover the whole Thinking-Lab population. A "Show
-   everyone" toggle and the search box both bypass the filter, for the rare
-   student in both, or a correction. The Open Challenge always shows the full
-   roster — there is no pairing to filter against, since everyone attends it
-   together.
+4. **Group 2's picker shows only students not already recorded in Group 1**
+   that same TC half-day — normally exactly who's left, since the two groups
+   between them cover the whole Thinking-Lab population. The filter stays on
+   while you search: typing "Pét" lists the Pétur who is still unplaced, and
+   if the only match is already in the other group the picker says so by name
+   instead of offering him. That is deliberate — the search box used to switch
+   the filter off, and that is how the wrong Pétur and the wrong Birkir got
+   tapped in weeks 3 and 4. "Show everyone" lifts it, for the rare student who
+   genuinely moved, and marks those names *· other group*. The Open Challenge
+   always shows the full roster — there is no pairing to filter against, since
+   everyone attends it together. After each tap the search box clears, so the
+   next name can be typed straight away.
+4b. **The week number is set from the date.** The allocation carries a date per
+   week, so opening the session chooser fills in the week whose date is nearest
+   (within three days — the course day is Wednesday). It stays editable; the
+   note under it says where the number came from. The phone's date is also
+   written into the export, and the merge flags a block whose week number and
+   date disagree. Week 2 was once recorded under the wrong number; this is the
+   fix.
+4c. **"Fill Expected" sets every rating not yet given to Expected**, so the
+   rhythm the TAs already use — Expected first, then move the exceptions — is
+   one tap. It never overwrites a rating already chosen. It is a button and not
+   a default on purpose: the export records, per rating, whether it was set by
+   that button (`bulk`) or chosen by hand (`tap`), so the analysis can tell a
+   judged Expected from a defaulted one, and an unrated group still shows as
+   unrated.
 5. Everyone tapped in counts as present *and* taking part. The `!` flag marks
    the exception — someone who took no part. Recording exceptions rather than
    ticking every student is what keeps this feasible at ~15 groups in 40

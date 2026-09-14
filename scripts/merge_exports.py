@@ -72,6 +72,15 @@ checked across blocks, per (week, half), counting only NAMED cohort groups: a
 block recorded before the cohort was set (cohort_group empty) plus the real
 one is the legitimate case attendance.py describes, and is not flagged.
 
+Week number vs the calendar (schema 6)
+--------------------------------------
+Exports from 2026-09-16 on carry `recorded_on`, the phone's date when the block
+was opened, and each group carries `scores_via`, saying per rating whether it
+was chosen by hand ("tap") or set by the Fill Expected button ("bulk"). The
+first is checked here against the allocation's date for that week and a
+mismatch of more than three days is reported; the second is passed through to
+groups.csv so the analysis can tell a judged Expected from a defaulted one.
+
 Still open, deliberately not decided by this script
 -----------------------------------------------------
 - The agreement figure below is plain percent-exact-match on an ordinal
@@ -89,6 +98,7 @@ Still open, deliberately not decided by this script
 
 import argparse
 import csv
+import datetime
 import difflib
 import json
 import sys
@@ -99,6 +109,9 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ROSTER = ROOT / "data" / "roster.json"
 DEFAULT_OUT = ROOT / "data" / "merged"
 DEFAULT_CORRECTIONS = ROOT / "data" / "corrections.csv"
+# The sealed allocation carries a date per week; used only to check that a
+# block's week number agrees with the date the phone recorded it on.
+DEFAULT_ALLOCATION = ROOT / "app" / "allocation.json"
 CORRECTION_FIELDS = ["block_id", "group", "ta", "wrong_id", "right_id", "reason", "date"]
 
 # Where the TAs' phones actually upload to -- the shared folder on RU's
@@ -275,8 +288,22 @@ def apply_corrections(chosen, corrections, roster):
     return applied, stale
 
 
-def merge(chosen, roster):
+def _date(s):
+    return datetime.date.fromisoformat(s[:10])
+
+
+def load_week_dates(path):
+    """{week: 'YYYY-MM-DD'} from the sealed allocation, or {} if it is not there."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {w["week"]: w["date"] for w in data.get("weeks", []) if w.get("date")}
+
+
+def merge(chosen, roster, week_dates=None):
     """Combine the authoritative per-TA data into one record per block_id."""
+    week_dates = week_dates or {}
     by_block = defaultdict(lambda: {"week": None, "half": None, "cohort_group": None,
                                      "conditions": {}, "groups": defaultdict(list)})
 
@@ -290,12 +317,17 @@ def merge(chosen, roster):
             # agrees on it -- nothing to reconcile, unlike condition below.
             rec["cohort_group"] = b.get("cohort_group")
             rec["conditions"][ta] = b["condition"]
+            # schema 6+: the phone's date when the block was opened. Kept per TA,
+            # since two phones can legitimately open the same block on different days.
+            if b.get("recorded_on"):
+                rec.setdefault("recorded_on", {})[ta] = b["recorded_on"]
             for g in b["groups"]:
                 rec["groups"][g["group"]].append({
                     "ta": ta,
                     "students": g["students"],
                     "no_part": g.get("no_part", []),
                     "scores": g.get("scores", {}),
+                    "scores_via": g.get("scores_via", {}),   # schema 6+: "bulk" | "tap" per rating
                     "progress": g.get("progress"),
                 })
 
@@ -369,9 +401,19 @@ def merge(chosen, roster):
 
         not_seen = sorted(set(roster) - present, key=lambda sid: roster.get(sid, sid))
 
+        # Week number vs the calendar. A TA typing last week's number is the
+        # error the app now prefills against; this is the check behind it.
+        wdate = week_dates.get(rec["week"])
+        for ta, on in sorted(rec.get("recorded_on", {}).items()):
+            if wdate and abs((_date(on) - _date(wdate)).days) > 3:
+                issues.append(
+                    "{} recorded this block on {}, but week {} is {} -- "
+                    "wrong week number? Check before analysis.".format(ta, on, rec["week"], wdate))
+
         blocks_out.append({
             "block_id": block_id, "week": rec["week"], "half": rec["half"],
             "cohort_group": rec["cohort_group"],
+            "recorded_on": rec.get("recorded_on", {}),
             "condition": condition, "raters": sorted(rec["conditions"]),
             "groups": groups_out,
             "present": sorted(present), "not_seen": not_seen,
@@ -423,7 +465,7 @@ def write_outputs(blocks, agreement, issues, chosen, roster, warnings, out_dir,
         w = csv.writer(fh)
         w.writerow(["week", "half", "condition", "cohort_group", "group", "ta",
                     "engagement", "collaboration", "self_reliance", "progress",
-                    "n_students", "n_flagged_no_part"])
+                    "n_students", "n_flagged_no_part", "scores_via"])
         for b in blocks:
             for g in b["groups"]:
                 for r in g["ratings"]:
@@ -437,6 +479,10 @@ def write_outputs(blocks, agreement, issues, chosen, roster, warnings, out_dir,
                         r["scores"].get("selfReliance", r["scores"].get("stopThinking", "")),
                         r["progress"] or "",
                         len(r["students"]), len(r["no_part"]),
+                        # how each of the three ratings was set, in column order:
+                        # "bulk" = Fill Expected, "tap" = chosen by hand; blank = older export
+                        ",".join(r.get("scores_via", {}).get(k, "") for k in RATING_KEYS)
+                        if r.get("scores_via") else "",
                     ])
 
     with open(out_dir / "membership.csv", "w", encoding="utf-8", newline="") as fh:
@@ -489,7 +535,7 @@ def main():
     corrections = load_corrections(Path(args.corrections)) if args.corrections else []
     applied, stale = apply_corrections(chosen, corrections, roster)
     load_warnings = list(load_warnings) + stale
-    blocks, agreement, issues = merge(chosen, roster)
+    blocks, agreement, issues = merge(chosen, roster, load_week_dates(DEFAULT_ALLOCATION))
     write_outputs(blocks, agreement, issues, chosen, roster, load_warnings, Path(args.out),
                   corrections_applied=applied)
 

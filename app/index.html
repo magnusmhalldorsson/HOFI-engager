@@ -88,10 +88,15 @@
              padding:.5rem .85rem;background:var(--surface-2);border-bottom:1px solid var(--rule)}
   .pickerbar:empty{display:none;padding:0;border-bottom:none}
   .linkbtn{border:none;background:none;color:var(--teal);font-weight:700;font-size:.78rem;padding:0;flex:none}
+  .fillrow{display:flex;align-items:center;gap:.6rem;margin:0 0 .6rem}
+  .fillbtn{border:1px solid var(--teal);background:none;color:var(--teal);font-weight:700;font-size:.8rem;
+    padding:.45rem .7rem;border-radius:.5rem}
+  .fillbtn:disabled{opacity:.4}
   .names{max-height:14rem;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule)}
   .name{background:var(--surface);border:none;text-align:left;padding:.6rem;font-size:.82rem;line-height:1.25;min-height:3rem}
   .name.taken{color:var(--ink-faint);text-decoration:line-through}
   .name.here{background:var(--teal-soft);font-weight:600}
+  .name.elsewhere{color:var(--ink-faint);font-style:italic}
   .none{grid-column:1/-1;background:var(--surface);padding:1rem;text-align:center;color:var(--ink-faint);font-size:.85rem}
   .factor+.factor{margin-top:.85rem}
   .flabel{display:flex;align-items:baseline;gap:.4rem;margin-bottom:.3rem}
@@ -196,6 +201,7 @@
 
     <label for="bweek">Week</label>
     <input type="number" id="bweek" min="1" max="12" value="1">
+    <p class="note" id="weekNote"></p>
 
     <label>Half-day</label>
     <div class="seg" id="segHalf"></div>
@@ -271,7 +277,6 @@
     </section>
 
     <div class="foot">
-      <button class="next" id="advance">Save &amp; next group</button>
       <div class="minor">
         <button id="toBlocks">Change session</button>
         <button id="toSummary">Upload</button>
@@ -635,8 +640,13 @@ function loadAllocation() {
     .then(r => r.ok ? r.json() : null)
     .then(d => {
       if (!d || !Array.isArray(d.weeks)) return;
+      const first = !read(K.alloc, null);
       alloc = d; write(K.alloc, d);
-      if (!el("blocks").classList.contains("hidden")) renderAllocNote();
+      if (!el("blocks").classList.contains("hidden")) {
+        // First fetch on a fresh phone can land after the chooser opened; the
+        // week prefill needs the dates, so do it now rather than next time.
+        if (first) { prefillWeek(); renderChooser(); } else renderAllocNote();
+      }
     })
     .catch(() => {});          // offline, or served from a phone's cache -- fine
 }
@@ -664,9 +674,43 @@ function renderAllocNote() {
     ". Confirm against the room, then tap the one you are recording.";
 }
 
+/* The allocation carries a date per week, so the week number can be set from
+   today's date instead of typed from memory -- which is how week 2 was once
+   recorded under the wrong number. Nearest allocation date within three days
+   wins (the course day is Wednesday; a Sunday-to-Saturday window never reaches
+   the next one). Done ONCE, when the chooser opens, never on re-render, so a
+   week the TA has deliberately typed is not overwritten under them. If no date
+   is close, the field is left alone and the note says so. */
+function weekFromToday() {
+  if (!alloc || !Array.isArray(alloc.weeks)) return null;
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  let best = null, bestGap = 4;
+  alloc.weeks.forEach(w => {
+    if (!w.date) return;
+    const d = new Date(w.date + "T12:00:00");
+    const gap = Math.abs(Math.round((today - d) / 86400000));
+    if (gap < bestGap) { best = w.week; bestGap = gap; }
+  });
+  return best;
+}
+
+function prefillWeek() {
+  const wk = weekFromToday();
+  const note = el("weekNote");
+  if (wk != null) {
+    draft.week = wk; write(K.draft, draft);
+    note.textContent = "Week " + wk + " set from today's date. Change it only if this is not today's session.";
+  } else {
+    note.textContent = alloc
+      ? "Today's date matches no week in the allocation — set the week by hand."
+      : "No allocation loaded yet — check the week number by hand.";
+  }
+}
+
 function openChooser() {
   if (!roster) { show("setup"); renderRosterState(); return; }
   if (!device) { show("setup"); renderRosterState(); return; }
+  prefillWeek();
   renderChooser();
   show("blocks");
 }
@@ -688,7 +732,10 @@ el("openBlock").onclick = () => {
   if (!blocks[id]) {
     blocks[id] = {
       week: wk, half: draft.half, condition: draft.condition, group: group,
-      ta: device.ta, cards: cards, current: cards[0], groups: {}
+      ta: device.ta, cards: cards, current: cards[0], groups: {},
+      // The phone's date when this block was first opened. Exported so the merge
+      // can check the week number against the calendar, not just trust it.
+      recorded_on: new Date().toISOString().slice(0, 10)
     };
   } else {
     const b = blocks[id];
@@ -822,26 +869,44 @@ function renderNames() {
     bar.appendChild(info); bar.appendChild(toggle);
   }
 
+  /* The other-cohort filter stays on while searching. It used to switch off
+     the moment a query was typed, so "Pét" listed both Péturs, the one already
+     recorded in the other cohort group included, with nothing to tell them
+     apart -- and that is exactly how the wrong Pétur (week 4) and the wrong
+     Birkir (week 3) were tapped. Hidden names are named below, so a genuine
+     move between cohorts is still one tap away via "Show everyone". */
   let list = students();
-  if (!q && !showAllNames) list = list.filter(s => here.has(s.id) || !elsewhere.has(s.id));
   if (q) list = list.filter(s => s.name.toLowerCase().includes(q));
+  const hidden = showAllNames ? [] : list.filter(s => !here.has(s.id) && elsewhere.has(s.id));
+  if (!showAllNames) list = list.filter(s => here.has(s.id) || !elsewhere.has(s.id));
 
   const box = el("names"); box.innerHTML = "";
   if (!list.length) {
-    box.innerHTML = q
-      ? '<div class="none">No match.</div>'
-      : '<div class="none">Everyone left is recorded in the other group — search, or "Show everyone".</div>';
+    if (hidden.length) {
+      box.innerHTML = '<div class="none">' +
+        hidden.map(s => s.name).join(", ") + (hidden.length === 1 ? " is" : " are") +
+        ' already recorded in the other cohort group. Not the person you mean? ' +
+        'Check the name. Moved groups? Tap "Show everyone".</div>';
+    } else {
+      box.innerHTML = q
+        ? '<div class="none">No match.</div>'
+        : '<div class="none">Everyone left is recorded in the other group — search, or "Show everyone".</div>';
+    }
     return;
   }
   list.forEach(s => {
     const btn = document.createElement("button");
-    btn.className = "name" + (here.has(s.id) ? " here" : taken.has(s.id) ? " taken" : "");
-    btn.textContent = s.name;
+    const other = !here.has(s.id) && elsewhere.has(s.id);
+    btn.className = "name" + (here.has(s.id) ? " here" : taken.has(s.id) ? " taken" : other ? " elsewhere" : "");
+    btn.textContent = s.name + (other ? " · other group" : "");
     btn.onclick = () => {
       const g = b.groups[b.current];
       if (here.has(s.id)) { g.students = g.students.filter(x => x !== s.id); delete g.flags[s.id]; }
       else g.students.push(s.id);
       write(K.blocks, blocks);
+      // Clear the query so the next name can be typed straight away, instead of
+      // tapping the × first every time (María, 2026-09-16). Focus is restored by renderSeats.
+      el("search").value = "";
       renderAll();
     };
     box.appendChild(btn);
@@ -851,6 +916,31 @@ function renderNames() {
 function renderFactors() {
   const b = B(), g = b.groups[b.current], box = el("factors");
   box.innerHTML = "";
+  if (!g.via) g.via = {};
+
+  /* One tap sets every rating that is still empty to Expected, and records
+     that it was set that way (g.via[key] = "bulk"; a rating tapped by hand is
+     "tap"). This is what the TAs were already doing by hand -- Expected first,
+     then move the exceptions -- made explicit rather than made a default. A
+     silent default would make "judged Expected" and "never looked at"
+     identical in the data, and the analysis needs to tell them apart. Only
+     empty ratings are filled, so a Below already given is never overwritten. */
+  const unset = RATINGS.filter(r => g.scores[r.key] == null);
+  const fill = document.createElement("button");
+  fill.type = "button"; fill.className = "fillbtn";
+  fill.textContent = "Fill Expected";
+  fill.disabled = !unset.length;
+  fill.setAttribute("aria-label", "Set every unrated rating to Expected");
+  fill.title = "Sets the ratings not yet given to Expected. Then change the exceptions.";
+  fill.onclick = () => {
+    unset.forEach(r => { g.scores[r.key] = "Expected"; g.via[r.key] = "bulk"; });
+    write(K.blocks, blocks); renderFactors(); renderDots();
+  };
+  const fillRow = document.createElement("div"); fillRow.className = "fillrow";
+  const fillHint = document.createElement("span"); fillHint.className = "note";
+  fillHint.textContent = unset.length ? "then change the exceptions" : "all three rated";
+  fillRow.appendChild(fill); fillRow.appendChild(fillHint);
+  box.appendChild(fillRow);
 
   RATINGS.forEach(r => {
     const wrap = document.createElement("div"); wrap.className = "factor";
@@ -886,7 +976,8 @@ function renderFactors() {
       btn.setAttribute("aria-pressed", String(g.scores[r.key] === v));
       btn.setAttribute("aria-label", r.name + ": " + v);
       btn.onclick = () => {
-        if (g.scores[r.key] === v) delete g.scores[r.key]; else g.scores[r.key] = v;
+        if (g.scores[r.key] === v) { delete g.scores[r.key]; delete g.via[r.key]; }
+        else { g.scores[r.key] = v; g.via[r.key] = "tap"; }
         write(K.blocks, blocks); renderFactors(); renderDots();
       };
       sc.appendChild(btn);
@@ -951,10 +1042,10 @@ function step(delta) {
 
 el("prev").onclick = () => step(-1);
 el("nextG").onclick = () => step(1);
-el("advance").onclick = () => {
-  const b = B();
-  if (groupIdx(b) < groupKeys(b).length - 1) step(1); else openSummary();
-};
+/* There used to be a "Save & next group" button here. It did exactly what the
+   › arrow does, and its label taught TAs that nothing is saved until it is
+   pressed -- the opposite of true, since every tap writes to localStorage.
+   Removed 2026-09-16 at María's suggestion. */
 el("toBlocks").onclick = openChooser;
 el("toSummary").onclick = openSummary;
 el("search").oninput = renderNames;
@@ -971,6 +1062,7 @@ function blockPayload(id) {
   return {
     block_id: id,
     week: b.week, half: b.half, condition: b.condition, cohort_group: b.group || null,
+    recorded_on: b.recorded_on || null,
     ta: b.ta, groups_covered: groupKeys(b),
     groups: groupKeys(b)
       .filter(n => b.groups[n] &&
@@ -980,6 +1072,7 @@ function blockPayload(id) {
         students: b.groups[n].students,
         no_part: Object.keys(b.groups[n].flags),
         scores: b.groups[n].scores,
+        scores_via: b.groups[n].via || {},   // per rating: "bulk" (Fill Expected) or "tap"
         progress: b.groups[n].progress
       })),
     not_seen: students().map(s => s.id).filter(id => !present.has(id))
@@ -990,9 +1083,11 @@ function payload() {
   return {
     course: (roster && roster.course) || "HOFI",
     ta: device.ta,
-    schema: 4,   // 4: groups identified by drawn card (R/B + A..9), not by number; groups_covered is now that card list
-                 // 3: cohort_group added (Group 1/2 within a TC session), stopThinking moved from counts into scores
+    schema: 6,   // 6: recorded_on per block (phone's date when opened); scores_via per group (bulk/tap)
                  // 5: stopThinking -> selfReliance, and the scale REVERSED so Above is the self-reliant end
+                 //    (shipped while the number still said 4 -- exports dated before 2026-09-16 carry 4)
+                 // 4: groups identified by drawn card (R/B + A..9), not by number; groups_covered is now that card list
+                 // 3: cohort_group added (Group 1/2 within a TC session), stopThinking moved from counts into scores
     exported: new Date().toISOString(),
     blocks: Object.keys(blocks).sort().map(blockPayload)
   };

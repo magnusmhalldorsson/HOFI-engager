@@ -10,7 +10,7 @@
    elsewhere. Freshness wins whenever the network can answer; the cache is a
    fallback for when it cannot.
 */
-const CACHE = "hofi-v1";
+const CACHE = "hofi-v2";
 const ASSETS = ["./", "./index.html", "./allocation.json", "./icon-180.png",
                 "./manifest.webmanifest"];
 
