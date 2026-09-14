@@ -310,6 +310,35 @@ The agreement figure is plain percent-match — good enough to sanity-check a
 dry run, not the statistic for the actual analysis (see the script's
 docstring for why).
 
+### A student in both cohort groups
+
+The two cohort groups of a half-day are complementary halves of the room, so
+one student in both is a mis-tap, almost always on a similar name (the other
+Pétur, the other Birkir). The per-block duplicate check cannot see it, because
+the two taps sit in two different blocks; the merge now also checks across
+blocks, per half-day, and reports each case. Only named cohort groups count:
+a block recorded before the cohort was set, then the real one, is legitimate
+and is not flagged.
+
+### Corrections: the export is never edited
+
+A mis-tap is a fact about the recording, and the TA's export that holds it is
+the primary record. Don't hand-edit it. Put the fix in `data/corrections.csv`
+(gitignored, like everything in `data/`):
+
+```
+block_id,group,ta,wrong_id,right_id,reason,date
+w04-AM-G2,B4,María,33061,33326,"Mis-tap on a similar name: …",2026-09-14
+```
+
+`merge_exports.py` applies it while merging, prints each correction it
+applied, records the list in `blocks.json` under `corrections_applied`, and
+warns about any row that no longer matches anything, so the file cannot
+quietly drift from the exports it corrects. `ta` may be blank to mean
+whichever TA recorded that group; `reason` may not be. Re-run the merge, then
+`attendance.py` and `combine_attendance.py`, and the correction flows through
+to the grade files. Pass `--corrections ""` to see the data as recorded.
+
 ## A first look at the merged data
 
 ```sh

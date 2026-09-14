@@ -44,8 +44,33 @@ merged output stays local; only the raw per-TA exports live in OneDrive.
     data/merged/groups.csv       one row per (block, group, rater)
     data/merged/membership.csv   one row per (block, group, rater, student)
 
+Reads data/corrections.csv if present (override with --corrections); see below.
+
 Nothing here is committed to git -- data/ is gitignored entirely, same as the
 roster and the raw exports.
+
+Corrections: the raw export is never edited
+--------------------------------------------
+A TA tapping the wrong student -- the other Pétur, the other Bjarki -- is a
+fact about the recording, and the export that holds it is the primary record.
+It is not hand-edited. Instead data/corrections.csv lists each known mis-tap
+(block, group, which TA, wrong id, right id, why, when) and this script
+applies it while merging, prints what it applied, and writes the list into
+blocks.json. A correction that matches nothing any more is reported, not
+ignored, so the file cannot drift from the exports it corrects.
+
+The first entry, 2026-09-14: week 4 AM, cohort 2, group B4, María tapped
+Pétur Jónsson for Pétur Óli Ágústsson. Found because Pétur Jónsson then
+appeared in both cohort groups, which is the check below.
+
+A student in both cohort groups is a mis-tap
+--------------------------------------------
+The two cohort groups of a half-day are complementary halves of the room, so
+one student cannot be in both. Per-block duplicate detection (problem 4 above)
+cannot see this, because the two taps are in two different blocks. This is
+checked across blocks, per (week, half), counting only NAMED cohort groups: a
+block recorded before the cohort was set (cohort_group empty) plus the real
+one is the legitimate case attendance.py describes, and is not flagged.
 
 Still open, deliberately not decided by this script
 -----------------------------------------------------
@@ -73,6 +98,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ROSTER = ROOT / "data" / "roster.json"
 DEFAULT_OUT = ROOT / "data" / "merged"
+DEFAULT_CORRECTIONS = ROOT / "data" / "corrections.csv"
+CORRECTION_FIELDS = ["block_id", "group", "ta", "wrong_id", "right_id", "reason", "date"]
 
 # Where the TAs' phones actually upload to -- the shared folder on RU's
 # OneDrive, synced locally by the OneDrive desktop client. Outside the repo
@@ -184,6 +211,70 @@ def pick_authoritative(files, union=False):
     return chosen, warnings
 
 
+def load_corrections(path):
+    """data/corrections.csv -> list of dicts, or [] if there is no such file.
+
+    Columns: block_id, group, ta, wrong_id, right_id, reason, date. `ta` may be
+    blank to mean whichever TA recorded that group. Every row must say why.
+    """
+    if not path or not path.exists():
+        return []
+    with open(path, newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    missing = [f for f in CORRECTION_FIELDS if rows and f not in rows[0]]
+    if missing:
+        sys.exit("{}: missing column(s) {} -- expected {}".format(
+            path, ", ".join(missing), ", ".join(CORRECTION_FIELDS)))
+    out = []
+    for i, r in enumerate(rows, start=2):
+        r = {k: (v or "").strip() for k, v in r.items()}
+        if not r["block_id"]:
+            continue
+        for f in ("group", "wrong_id", "right_id", "reason"):
+            if not r[f]:
+                sys.exit("{} line {}: '{}' is empty -- a correction has to say what and why".format(
+                    path, i, f))
+        out.append(r)
+    return out
+
+
+def apply_corrections(chosen, corrections, roster):
+    """Swap wrong_id for right_id in the matching group(s), in memory only.
+
+    Returns (applied, stale): human-readable lines for what changed, and the
+    corrections that matched nothing -- which means the exports have changed
+    under them, or the row is wrong, and either way somebody should look.
+    """
+    applied, stale = [], []
+    for c in corrections:
+        hit = False
+        for ta, entry in chosen.items():
+            if c["ta"] and c["ta"] != ta:
+                continue
+            for b in entry["data"]["blocks"]:
+                if b["block_id"] != c["block_id"]:
+                    continue
+                for g in b["groups"]:
+                    if str(g["group"]) != c["group"] or c["wrong_id"] not in g["students"]:
+                        continue
+                    g["students"] = [c["right_id"] if x == c["wrong_id"] else x
+                                     for x in g["students"]]
+                    if c["wrong_id"] in g.get("no_part", []):
+                        g["no_part"] = [c["right_id"] if x == c["wrong_id"] else x
+                                        for x in g["no_part"]]
+                    hit = True
+                    applied.append("{} group {} ({}): {} -> {}  [{}{}]".format(
+                        c["block_id"], c["group"], ta,
+                        roster.get(c["wrong_id"], c["wrong_id"]),
+                        roster.get(c["right_id"], c["right_id"]),
+                        c["reason"], ", " + c["date"] if c["date"] else ""))
+        if not hit:
+            stale.append("{} group {}{}: {} not found there -- correction did nothing".format(
+                c["block_id"], c["group"], " (" + c["ta"] + ")" if c["ta"] else "",
+                roster.get(c["wrong_id"], c["wrong_id"])))
+    return applied, stale
+
+
 def merge(chosen, roster):
     """Combine the authoritative per-TA data into one record per block_id."""
     by_block = defaultdict(lambda: {"week": None, "half": None, "cohort_group": None,
@@ -288,10 +379,32 @@ def merge(chosen, roster):
         })
         global_issues.extend("{}: {}".format(block_id, i) for i in issues)
 
+    # A student in two NAMED cohort groups of the same half-day. Only visible
+    # across blocks, so it lives here rather than in the per-block loop.
+    where = defaultdict(lambda: defaultdict(list))   # (week, half) -> sid -> [(cg, group, ta)]
+    for b in blocks_out:
+        if not b["cohort_group"]:
+            continue
+        for g in b["groups"]:
+            for r in g["ratings"]:
+                for sid in r["students"]:
+                    where[(b["week"], b["half"])][sid].append((b["cohort_group"], g["group"], r["ta"]))
+    for (week, half), students in sorted(where.items()):
+        for sid, spots in sorted(students.items(), key=lambda kv: roster.get(kv[0], kv[0])):
+            if len({cg for cg, _, _ in spots}) > 1:
+                global_issues.append(
+                    "w{:02d}-{}: {} recorded in both cohort groups of the same half-day: {} "
+                    "-- the cohort groups are complementary halves of the room, so one of "
+                    "these is a mis-tap, most likely on a similar name. Fix via "
+                    "data/corrections.csv.".format(
+                        int(week), half, roster.get(sid, sid),
+                        ", ".join("G{} group {} ({})".format(cg, g, ta) for cg, g, ta in spots)))
+
     return blocks_out, agreement_out, global_issues
 
 
-def write_outputs(blocks, agreement, issues, chosen, roster, warnings, out_dir):
+def write_outputs(blocks, agreement, issues, chosen, roster, warnings, out_dir,
+                  corrections_applied=()):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     with open(out_dir / "blocks.json", "w", encoding="utf-8") as fh:
@@ -299,6 +412,7 @@ def write_outputs(blocks, agreement, issues, chosen, roster, warnings, out_dir):
             "source_files": {ta: str(e["path"]) for ta, e in chosen.items()},
             "roster_size": len(roster),
             "load_warnings": warnings,
+            "corrections_applied": list(corrections_applied),
             "blocks": blocks,
             "agreement": agreement,
             "issues": issues,
@@ -351,6 +465,9 @@ def main():
                     help="keep every block a TA recorded, not just those in their newest "
                          "export -- for when one TA's work is split across two devices")
     ap.add_argument("--out", default=str(DEFAULT_OUT), help="output directory")
+    ap.add_argument("--corrections", default=str(DEFAULT_CORRECTIONS),
+                    help="known mis-taps to apply while merging (default data/corrections.csv "
+                         "if it exists; pass an empty string to apply none)")
     args = ap.parse_args()
 
     if args.exports:
@@ -369,12 +486,21 @@ def main():
 
     roster = load_roster(Path(args.roster))
     chosen, load_warnings = pick_authoritative(paths, union=args.union)
+    corrections = load_corrections(Path(args.corrections)) if args.corrections else []
+    applied, stale = apply_corrections(chosen, corrections, roster)
+    load_warnings = list(load_warnings) + stale
     blocks, agreement, issues = merge(chosen, roster)
-    write_outputs(blocks, agreement, issues, chosen, roster, load_warnings, Path(args.out))
+    write_outputs(blocks, agreement, issues, chosen, roster, load_warnings, Path(args.out),
+                  corrections_applied=applied)
 
     print("Merged {} TA(s) across {} block(s) -> {}".format(len(chosen), len(blocks), args.out))
     for ta, entry in sorted(chosen.items()):
         print("  {} <- {}".format(ta, entry["path"]))
+
+    if applied:
+        print("\nCorrections applied ({}), from {}:".format(len(applied), args.corrections))
+        for line in applied:
+            print("  * " + line)
 
     if load_warnings:
         print("\nLoad warnings:")
