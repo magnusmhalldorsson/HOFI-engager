@@ -29,9 +29,11 @@ The approach has two parts:
 > only the all-distance encodings (§5, §6, `ball_event_cnf.py`) can succeed.
 
 > **Upper bounds (§10).** `search/sa.c` also finds a 5-uniform representant of Q₇ and of Q₈
-> (`witnesses/q7_k5.txt`, `q8_k5.txt`) and a 6-uniform one of Q₉ (`q9_k6.txt`), so
-> R(Q₇) ≤ R(Q₈) ≤ 5 and R(Q₉) ≤ 6. A 5-uniform Q₉ was searched for and not found. None of
-> this bears on the lower bound R(Q₇) ≥ 5, which is the open goal of this directory.
+> (`witnesses/q7_k5.txt`, `q8_k5.txt`), a 6-uniform one of Q₉ (`q9_k6.txt`) and a 7-uniform one
+> of Q₁₀ (`q10_k7.txt`), so R(Q₇) ≤ R(Q₈) ≤ 5, R(Q₉) ≤ 6 and R(Q₁₀) ≤ 7. A 5-uniform Q₉ and a
+> 6-uniform Q₁₀ were searched for and not found. None of this bears on the lower bound
+> R(Q₇) ≥ 5, which is the open goal of this directory. `STRUCTURE.md` collects exact identities for
+> uniform representants of Qₙ, with the tools in `lab/`.
 
 <!-- RESULTS-PLACEHOLDER -->
 
@@ -471,7 +473,7 @@ lrat-trim q7.cnf q7.lrat                           # prints "s VERIFIED"
 The solvers and checkers used were CaDiCaL 2.x, Kissat 4.0.4, lrat-trim 0.2.0, and
 lrat-check / drat-trim from the drat-trim repository.
 
-## 10. Upper bounds from local search: Q₇, Q₈, Q₉
+## 10. Upper bounds from local search: Q₇ to Q₁₀
 
 `search/sa.c` (§ heuristic evidence above) finds representants, never refutations. Build it
 with `cc -O3 -march=native -o sa search/sa.c -lm`; a solution is written to the output file
@@ -482,15 +484,16 @@ and must be checked with `check_word.py`.
 | Q₇ | 5 | `witnesses/q7_k5.txt` | earlier session; reproduced by `sa 7 5 seed 120 T B PT out.txt -` with T 0.2 to 0.5, B 10⁵ or 10⁶, PT 100 or 400 | 0.4 to 11 CPU-s, 12 of 12 runs |
 | Q₈ | 5 | `witnesses/q8_k5.txt` | `sa 8 5 114 3000 0.8 100000 100 out.txt -` | 372M moves, 335 CPU-s, 1 of 16 seeds |
 | Q₉ | 6 | `witnesses/q9_k6.txt` | `sa 9 6 501 900 0.8 100000 100 out.txt -` | 19M moves, 40 CPU-s, 4 of 4 seeds (30 to 110 s) |
+| Q₁₀ | 7 | `witnesses/q10_k7.txt` | `sa 10 7 703 1800 0.8 100000 100 out.txt -` | 42.5M moves, 322 CPU-s; 4 of 4 seeds (42.5M to 73.5M moves) |
 
-The Q₈ and Q₉ words are 1280 and 3072 letters long. Their SHA-256 hashes start
-`dd984615aa7a24b2` and `d1015746b7e19b6b`. Each passes `check_word.py`, and each was also checked by a
-second script, not committed here, that tests the subword definition directly and finds all
-edges alternating and no alternating non-edge. That script rejects mutated words, words with
-two adjacent cube-edge letters swapped, and a word tested against the wrong n.
+The Q₈, Q₉ and Q₁₀ words are 1280, 3072 and 7168 letters long. Their SHA-256 hashes start
+`dd984615aa7a24b2`, `d1015746b7e19b6b` and `25600665466e4534`. Each passes `check_word.py`, and each was
+also checked by `lab/indep_check.py`, a second script that tests the subword definition directly and
+finds all edges alternating and no alternating non-edge. On the Q₈ word that script rejects a shuffled
+word, words with two adjacent cube-edge letters swapped, and a word tested against the wrong n.
 
 Since induced subgraphs of a k-representable graph are k-representable (F2), this gives
-R(Q₇) ≤ R(Q₈) ≤ 5 and R(Q₉) ≤ 6. It says nothing about the lower bound. If Q₇ is not
+R(Q₇) ≤ R(Q₈) ≤ 5, R(Q₉) ≤ 6 and R(Q₁₀) ≤ 7. It says nothing about the lower bound. If Q₇ is not
 4-representable, which is the goal of this directory, then R(Q₇) = R(Q₈) = 5. If Q₇ is
 4-representable, R(Q₈) is still open between 4 and 5.
 
@@ -510,6 +513,18 @@ R(Q₇) ≤ R(Q₈) ≤ 5 and R(Q₉) ≤ 6. It says nothing about the lower bou
   2 and 3 together stalled at 142 violations in a single 150-second run, not extended.
 * On Q₈ with k = 5 the same restricted constraint sets (distance 3 alone; distances 2 and 3)
   are solved in seconds.
+
+**Q₁₀ with k = 6 was not found.** Sixteen seeds ran for about 30 CPU-minutes each, and the eight
+best then continued to about 90 CPU-minutes (1.2·10⁹ moves).
+
+* The best run has 63 violated non-edges out of 518,656 and is still decreasing slowly. The best
+  value among the runs after 1.2, 2.3, 3.7, 4.9 and 12·10⁸ moves was 175, 116, 108, 96 and 63. This
+  differs from Q₉ with k = 5, which sat on a plateau from the tenth minute on, so the evidence
+  against a 6-uniform Q₁₀ is weaker than the evidence against a 5-uniform Q₉. A longer or better
+  search could still succeed.
+* The k = 7 control above shows the search scales to Q₁₀.
+* With only distances 2 and 3 required not to alternate (k = 6, two seeds, 3.7·10⁸ moves) the
+  search ends at 133 and 245 violations, nearly all at distance 3.
 
 This is heuristic evidence only. A stalled annealer proves nothing, and the same kind of stall
 occurs on instances whose status is unknown (Q₇ with k = 4, §6b). The exact tool for a
