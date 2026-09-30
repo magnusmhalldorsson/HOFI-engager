@@ -13,7 +13,7 @@ unsatisfiability of any F<i> implies unsatisfiability of F1.  An UNSAT segment i
 cake_lpr ("s VERIFIED UNSAT").  Proof files are deleted after verification; their sha256 and the
 checker output are kept in <job>/ledger.txt.
 """
-import hashlib, json, os, subprocess, sys, time
+import fcntl, hashlib, json, os, subprocess, sys, time
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CADICAL = os.path.join(ROOT, 'tools/cadical/build/cadical')
@@ -86,6 +86,12 @@ def parse_lrat(fn, m_input, out_trunc):
         f.write(data[:last_ok])
     return added, deleted, nadd, last_ok, n
 
+def cake(args):
+    """run cake_lpr under a global lock: one checker at a time keeps memory bounded"""
+    with open(os.path.join(ROOT, 'segs', 'cake.lock'), 'w') as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        return subprocess.run([CAKE] + args, capture_output=True, text=True)
+
 def run_segment(job, i, T):
     d = os.path.join(ROOT, 'segs', job)
     F = os.path.join(d, f'F{i}.cnf'); P = os.path.join(d, f'seg{i}.lrat'); L = os.path.join(d, f'seg{i}.log')
@@ -99,7 +105,7 @@ def process(job, i):
     F = os.path.join(d, f'F{i}.cnf'); P = os.path.join(d, f'seg{i}.lrat'); L = os.path.join(d, f'seg{i}.log')
     out = open(L).read() if os.path.exists(L) else ''
     if 's UNSATISFIABLE' in out:
-        r = subprocess.run([CAKE, F, P], capture_output=True, text=True)
+        r = cake([F, P])
         log(job, f'seg{i}: UNSAT; proof sha256 {sha256(P)} size {os.path.getsize(P)}; cake_lpr: {r.stdout.strip()}')
         if 's VERIFIED UNSAT' in r.stdout:
             json.dump({'status': 'unsat', 'seg': i}, open(os.path.join(d, 'state.json'), 'w'))
@@ -117,8 +123,8 @@ def process(job, i):
                        capture_output=True, text=True)
     if x.returncode != 0:
         log(job, f'seg{i}: extractor failed rc={x.returncode}: {x.stderr.strip()}'); raise SystemExit(2)
-    r = subprocess.run([CAKE, F, Ptr, Kf], capture_output=True, text=True)
-    ver = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr.strip()
+    r = cake([F, Ptr, Kf])
+    ver = (r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr.strip()) + f' (rc={r.returncode})'
     log(job, f'seg{i}: unfinished; {x.stdout.strip()}; proof sha256 {sha256(Ptr)}; cake_lpr: {ver}')
     if 's VERIFIED TRANSFORMATION' not in r.stdout:
         log(job, f'seg{i}: TRANSFORMATION VERIFICATION FAILED'); raise SystemExit(2)
