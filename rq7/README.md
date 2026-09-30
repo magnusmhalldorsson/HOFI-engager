@@ -514,17 +514,20 @@ R(Q₇) ≤ R(Q₈) ≤ 5, R(Q₉) ≤ 6 and R(Q₁₀) ≤ 7. It says nothing a
 * On Q₈ with k = 5 the same restricted constraint sets (distance 3 alone; distances 2 and 3)
   are solved in seconds.
 
-**Q₁₀ with k = 6 was not found.** Sixteen seeds ran for about 30 CPU-minutes each, and the eight
-best then continued to about 90 CPU-minutes (1.2·10⁹ moves).
+**Q₁₀ with k = 6 was not found.** Sixteen seeds ran for about 30 CPU-minutes each. The eight best
+then ran to the cap of 2 CPU-hours (1.6·10⁹ moves each), and none solved it.
 
-* The best run has 63 violated non-edges out of 518,656 and is still decreasing slowly. The best
-  value among the runs after 1.2, 2.3, 3.7, 4.9 and 12·10⁸ moves was 175, 116, 108, 96 and 63. This
-  differs from Q₉ with k = 5, which sat on a plateau from the tenth minute on, so the evidence
-  against a 6-uniform Q₁₀ is weaker than the evidence against a 5-uniform Q₉. A longer or better
-  search could still succeed.
+* The lowest count seen in any run was 55 violated non-edges out of 518,656 (0.011%), then 63, 71
+  and 77. All eight runs saw between 55 and 143. The best value among the runs after 1.2, 2.3, 3.7,
+  4.9, 12 and 16·10⁸ moves was 175, 116, 108, 96, 63 and 55, so the search was still improving slowly
+  when the cap stopped it. This differs from Q₉ with k = 5, which sat on a plateau from the tenth
+  minute on (0.3 to 0.4% of the non-edges), so the evidence against a 6-uniform Q₁₀ is weaker than
+  the evidence against a 5-uniform Q₉. A longer or better search could still succeed.
+* In the runs that ended lowest, about half of the remaining violations are at distance 3 and
+  about a third at distance 5.
 * The k = 7 control above shows the search scales to Q₁₀.
 * With only distances 2 and 3 required not to alternate (k = 6, two seeds, 3.7·10⁸ moves) the
-  search ends at 133 and 245 violations, nearly all at distance 3.
+  lowest counts seen were 133 and 245, nearly all at distance 3.
 
 This is heuristic evidence only. A stalled annealer proves nothing, and the same kind of stall
 occurs on instances whose status is unknown (Q₇ with k = 4, §6b). The exact tool for a

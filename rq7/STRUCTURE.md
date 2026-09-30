@@ -131,12 +131,12 @@ are required not to alternate):
 | 5 | Q_8 | solved, 1 of 16 seeds (372M moves) |
 | 5 | Q_9 | 417-530 plateau; d2+d3 142 |
 | 6 | Q_9 | solved, 4 of 4 seeds |
-| 6 | Q_10 | best 63 after 1.2e9 moves and still decreasing slowly (16 seeds, then the best 8); d2+d3: 133 and 245, nearly all at distance 3 |
+| 6 | Q_10 | lowest 55 seen; 16 seeds, then the best 8 to the 2 CPU-hour cap (1.6e9 moves), all between 55 and 143, still improving slowly; about half of the residual at distance 3, a third at distance 5; d2+d3 only: lowest 133 and 245 |
 | 7 | Q_10 | solved, 4 of 4 seeds (42.5M to 73.5M moves) |
 
 Best words found give R(Q_n) <= 4, 4, 4, 5, 5, 6, 7 for n = 4, ..., 10. Each extra dimension beyond
 Q_8 costs one more copy in these words. This is an observation about the annealer, not a theorem,
-and Q_10 with k = 6 is unresolved: the best run is still improving slowly.
+and Q_10 with k = 6 is unresolved: the best run was still improving slowly when the cap stopped it.
 
 ## 6. Literature (checked 2026-09-30)
 
