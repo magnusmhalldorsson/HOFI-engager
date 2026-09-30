@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Soundness tests for window_cnf.py and crr_cnf.py: every clause must be satisfied by (the
+Soundness tests for window_cnf.py, crr_cnf.py and pfr_cnf.py: every clause must be satisfied by (the
 normalised event order of) every genuine representant.
 
 For each word w that represents Q_n (checked from the definition by check_word.py):
@@ -8,7 +8,7 @@ For each word w that represents Q_n (checked from the definition by check_word.p
     constraint: the normalised order X or its reverse rho(X) satisfies every clause
     (rho is a symmetry of the CNF, see window_cnf.py);
   * WR, normalisation 'lag': (0,0) is an event of maximal lag;
-  * CRR: (0,0) is the last rank-0 event, neighbours of 0 in order.
+  * CRR and PFR: (0,0) is the last rank-0 event, neighbours of 0 in order.
 Usage: python3 window_soundness_test.py N WORDFILE [N WORDFILE ...]
 """
 import itertools
@@ -16,6 +16,7 @@ import sys
 
 from check_word import represents_Qn
 from crr_cnf import CRR
+from pfr_cnf import PFR
 from event_cnf import popcount
 from soundness_test import event_positions, normalise
 from window_cnf import WindowCNF
@@ -136,6 +137,24 @@ def check_crr(n, w):
     return len(violated(R.clauses, val)), len(R.clauses)
 
 
+def check_pfr(n, w):
+    w2 = last_normalise(w, n)
+    assert represents_Qn(w2, n)[0]
+    pos, k = event_positions(w2, n)
+    R = PFR(n, k).build()
+    val = {v: pos(a, s) < pos(b, s) for key, v in R.var.items() if key[0] == "o"
+           for (_, s, a, b) in [key]}
+    # every auxiliary u occurs in binary implications u -> l and in one disjunction:
+    # give it the value of the conjunction it stands for
+    imp = {}
+    for c in R.clauses:
+        if len(c) == 2 and c[0] < 0 and -c[0] not in val:
+            imp.setdefault(-c[0], []).append(c[1])
+    for u, lits in imp.items():
+        val[u] = all(val[abs(l)] == (l > 0) for l in lits)
+    return len(violated(R.clauses, val)), len(R.clauses)
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     total = 0
@@ -147,6 +166,7 @@ if __name__ == "__main__":
             "WR shortest+revlex": check_wr(n, w, "shortest", revlex=60),
             "WR lag": check_wr(n, w, "lag"),
             "CRR": check_crr(n, w),
+            "PFR": check_pfr(n, w),
         }
         for name, (bad, tot) in res.items():
             total += bad

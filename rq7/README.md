@@ -268,7 +268,19 @@ this gives CRR(n, k), with about 0.9M clauses for (7, 4). Its normalisation make
 the last event of rank 0, by translation, and sorts the neighbours of 0 in rank 1. It
 refutes k = 3 for Q₅ and is satisfiable for (6, 4).
 
-`window_soundness_test.py` checks every clause of these CNFs, under every normalisation,
+**The weakest relaxation (`pfr_cnf.py`).** Keep only the orders of same-rank events at
+distance 2. Take a vertex y, one of its arcs (y, s) → (y, s+2), and the order π in which
+its neighbours bᵢ = y + eᵢ fire inside the arc (rank s + 1). Let t_{jl} = y + e_j + e_l.
+The diagonal (bᵢ, t_{jl}) of the cube y + span(eᵢ, e_j, e_l) needs a cone moment, and y is
+frozen during it, so the cone lies inside an arc of y. If the bottom is bᵢ, then b_j and
+b_l fire before bᵢ, and t_{jl} precedes y at rank s + 2. If the bottom is t_{jl}, then bᵢ
+fires before b_j and b_l, and y precedes t_{jl} at rank s. So bᵢ is last or first among
+{bᵢ, b_j, b_l} in π. These conditions, the cone conditions for (y, y + e_T), (E4) at
+distance 2 and transitivity on triangles of the halved cube give PFR(n, k). It has 0.56M
+clauses for (7, 4), mostly auxiliary definitions. It refutes k = 3 for Q₅ and Q₆, and it
+is satisfiable for (6, 4).
+
+`window_soundness_test.py` checks every clause of these CNFs (WR, CRR, PFR), under every normalisation,
 against normalised genuine representants.
 
 ## 7. Certificates (`certify/`)
