@@ -336,10 +336,12 @@ Against that, the local search of `search/sa.c` behaves as follows:
   of radius 3 and 4 around 0 is satisfiable.
 * *All distances on a ball.* `ball_event_cnf.py` gives the all-distance event CNF of
   §5 with full transitivity, restricted to a ball around 0, with the lag normalisation.
-  Distances inside a ball around 0 are distances in Q₇, so this is sound; it passes a
-  soundness test on the witnesses. It refutes k = 3 on B₃(0) ⊂ Q₅ and on Q₄ itself. For
-  (7, 4) it is satisfiable on B₃(0), and the run on B₄(0) (60k variables, 4.9M clauses)
-  is in progress.
+  Its clauses are clauses of the full CNF whose events lie in the ball, so it is sound
+  for any vertex set. It also passes a soundness test on the witnesses.
+  * It refutes k = 3 on B₃(0) ⊂ Q₅ and on Q₄ itself. The B₃(0) ⊂ Q₅ refutation is
+    checked by cake_lpr via `certify/stream_verify.sh`.
+  * For (7, 4) it is satisfiable on B₃(0). The runs on B₄(0) (60k variables, 4.9M
+    clauses) and B₅(0) (90k variables, 9.2M clauses) are in progress.
 * *Backbone of PFR+(6, 4).* The literals common to all solutions of the normalised
   PFR+(6, 4) are only the normalisation and its transitive closure. The tight case n = 6
   therefore has no rigid structure to transfer to the seven Q₆ faces of Q₇ through 0.

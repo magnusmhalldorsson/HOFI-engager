@@ -4,11 +4,12 @@ The event CNF of event_cnf.py (all distances, full transitivity) restricted to t
 a vertex set S, with the lag normalisation of window_cnf.py: (0,0) maximises the lag, so every
 event of rank <= 0 precedes it; then the neighbours of 0 are sorted in rank 1.
 
-Soundness.  For S = the Hamming ball B_R(0) (or any set that contains a geodesic between any two
-of its vertices), distances inside S are distances in Q_n, so every kept clause is a clause of
-event_cnf.py --tri all (restricted to events of S) or a lag-normalisation unit, and each of
-them holds in the lag-normalised event order of any k-uniform representant of Q_n.  An
-unsatisfiable restriction therefore still proves that Q_n is not k-representable.
+Soundness.  Forced relations are computed with distances in Q_n (not in the subgraph S), so
+every kept clause is a clause of event_cnf.py --tri all whose events all belong to S, or a
+lag-normalisation unit; each of them holds in the lag-normalised event order of any k-uniform
+representant of Q_n.  This is true for every vertex set S; balls around 0 are used because 0
+carries the normalisation.  An unsatisfiable restriction therefore still proves that Q_n is not
+k-representable.
 
 Usage: python3 ball_event_cnf.py N K R -o out.cnf
 """
