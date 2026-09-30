@@ -25,9 +25,10 @@ from event_cnf import EventCNF, popcount
 
 
 class WindowCNF(EventCNF):
-    def __init__(self, n, k, dset=(2, 3), shortest=True):
-        super().__init__(n, k, shortest=shortest)
+    def __init__(self, n, k, dset=(2, 3), norm="shortest"):
+        super().__init__(n, k, shortest=(norm == "shortest"))
         self.dset = set(dset)
+        self.norm = norm
 
     def before(self, a, r, b, s):
         if a != b and abs(s - r) >= 2 and abs(s - r) < popcount(a ^ b):
@@ -59,28 +60,79 @@ class WindowCNF(EventCNF):
             self.add(ors)
 
     def windows(self):
-        n, P = self.n, self.P
+        """transitivity in every window (ranks r, r+1): each triangle once -- triangles
+        inside a single rank are generated only in the window where that rank comes first"""
+        P = self.P
         for r in range(P):
             ev = [(v, r) for v in self.V if popcount(v) % 2 == r % 2] + \
                  [(v, r + 1) for v in self.V if popcount(v) % 2 == (r + 1) % 2]
-            # each triangle of the window once; skip triangles lying inside a single rank
-            # except for r even... (rank-r triangles are generated in window (r, r+1) only)
             for e1, e2, e3 in itertools.combinations(ev, 3):
+                if e1[1] == e2[1] == e3[1] == r + 1:
+                    continue
                 x1 = self.before(e1[0], e1[1], e2[0], e2[1])
                 x2 = self.before(e2[0], e2[1], e3[0], e3[1])
                 x3 = self.before(e3[0], e3[1], e1[0], e1[1])
-                if any(isinstance(x, bool) for x in (x1, x2, x3)):
-                    # at least one forced relation: keep only the non-trivial implications
-                    self.add([self.neg(x1), self.neg(x2), self.neg(x3)])
-                    self.add([x1, x2, x3])
-                else:
-                    self.add([self.neg(x1), self.neg(x2), self.neg(x3)])
-                    self.add([x1, x2, x3])
+                self.add([self.neg(x1), self.neg(x2), self.neg(x3)])
+                self.add([x1, x2, x3])
 
-    def build(self):
+    def lag_normalisation(self):
+        """(0,0) is an event of maximal lag t(x,r) - (L/2k) r: every event of rank <= 0
+        precedes it (see README)"""
+        for v in self.V:
+            if v == 0:
+                continue
+            r = 0 if popcount(v) % 2 == 0 else -1
+            self.add([self.before(v, r, 0, 0)])
+
+    def rho(self, key):
+        """time reversal composed with reversing the coordinate order:
+        (a, r) < (b, s)  |->  (pi b, 2 - s) < (pi a, 2 - r).  It maps the CNF (with the
+        shortest-arc normalisation) onto itself: windows to windows, the arc (0,0)->(0,2) to
+        itself, and the neighbour order e_1 < ... < e_n to itself."""
+        _, a, r, b, s = key
+        pi = lambda v: sum(1 << (self.n - 1 - i) for i in range(self.n) if v >> i & 1)
+        return self.before(pi(b), 2 - s, pi(a), 2 - r)
+
+    def reversal_lex(self, m):
+        """lex-leader constraint X <=_lex rho(X) on the first m variables of the view of (0,0)
+        (valid because rho is a symmetry of the CNF and an involution)"""
+        X, Y = [], []
+        for y in sorted(self.V, key=lambda v: (popcount(v), v)):
+            for s in range(-1, 2):
+                if y == 0 or (s - popcount(y)) % 2 or len(X) >= m:
+                    continue
+                l = self.before(y, s, 0, 0)
+                if isinstance(l, bool) or l is None:
+                    continue
+                key = ("lt",) + next(k[1:] for k, v in self.var.items() if v == abs(l))
+                X.append(abs(l)); Y.append(self.rho(key))
+        # X <=_lex Y  <=>  Y >=_lex X
+        self.lex_leq(X, Y)
+
+    def lex_leq(self, X, Y):
+        """X <=_lex Y (false < true)"""
+        eq = None
+        for i, (x, y) in enumerate(zip(X, Y)):
+            if isinstance(y, bool):
+                raise ValueError("forced literal in lex constraint")
+            pre = [] if eq is None else [-eq]
+            self.add(pre + [-x, y])                   # prefix equal -> not (x > y)
+            if i == len(X) - 1:
+                break
+            e = self._new(("lexeq", i))
+            self.add(pre + [-x, -y, e])
+            self.add(pre + [x, y, e])
+            eq = e
+
+    def build(self, revlex=0):
         self.windows()
         self.nonalt()
         self.symmetry()
+        if self.norm == "lag":
+            self.lag_normalisation()
+        if revlex:
+            assert self.norm == "shortest"
+            self.reversal_lex(revlex)
         return self
 
 
@@ -89,7 +141,10 @@ if __name__ == "__main__":
     ap.add_argument("n", type=int)
     ap.add_argument("k", type=int)
     ap.add_argument("-o", "--out", required=True)
+    ap.add_argument("--norm", choices=["shortest", "lag"], default="shortest")
+    ap.add_argument("--revlex", type=int, default=0,
+                    help="break time reversal by a lex-leader constraint on this many variables")
     a = ap.parse_args()
-    E = WindowCNF(a.n, a.k).build()
+    E = WindowCNF(a.n, a.k, norm=a.norm).build(revlex=a.revlex)
     E.write(a.out)
     print(f"WR({a.n},{a.k}): {len(E.var)} variables, {len(E.clauses)} clauses -> {a.out}")
