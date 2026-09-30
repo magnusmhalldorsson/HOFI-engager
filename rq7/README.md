@@ -16,12 +16,17 @@ The approach has two parts:
 > are cross-checked against a theory-free encoding, and explicit witness words are in
 > `witnesses/`.
 >
-> For Q₇ the current target is the window CNF WR(7, 4) of §6a. It is an exact encoding
-> of the distance-2/3 part of the problem, with 51k variables and 4.4M clauses, and it
-> needs no case split. Solvers are running on it, one of them as a restartable CaDiCaL
-> chain checked by cake_lpr (§7). The earlier three-case instances of §6 are paused. No
-> instance has been refuted yet, so the claim is **not yet established** by this
-> directory.
+> For Q₇ the current targets are the window CNF WR(7, 4) of §6a and its relaxations CRR
+> and PFR+ (§6a, §6b). WR is an exact encoding of the distance-2/3 part of the problem,
+> with 51k variables and 4.4M clauses, and it needs no case split. PFR+ is the smallest
+> sound formula so far (23k variables, 0.22M clauses). Solvers are running on them, one as
+> a restartable CaDiCaL chain checked by cake_lpr (§7). The earlier three-case instances
+> of §6 are paused.
+>
+> No instance has been refuted yet, so the claim is **not yet established** by this
+> directory. There is also a real risk that the distance-2/3 part alone is satisfiable
+> for (7, 4). It is satisfiable for (4, 3) even though R(Q₄) = 4, see §6b. In that case
+> only the all-distance encodings (§5, §6, `ball_event_cnf.py`) can succeed.
 
 <!-- RESULTS-PLACEHOLDER -->
 
@@ -280,8 +285,104 @@ distance 2 and transitivity on triangles of the halved cube give PFR(n, k). It h
 clauses for (7, 4), mostly auxiliary definitions. It refutes k = 3 for Q₅ and Q₆, and it
 is satisfiable for (6, 4).
 
-`window_soundness_test.py` checks every clause of these CNFs (WR, CRR, PFR), under every normalisation,
-against normalised genuine representants.
+`window_soundness_test.py` checks every clause of these CNFs (WR, CRR, PFR, PFR+), under every
+normalisation, against normalised genuine representants.
+
+## 6b. Further relaxations, and where the obstruction is not
+
+**PFR+ (`pfrp_cnf.py`).** This uses the same variables as PFR: the orders of same-rank
+pairs at distance 2. PFR's cone conditions (C) and (D) are replaced by the exact Q₃
+condition they come from:
+
+* (QX) For every Q₃ C and every diagonal {x, x′} of C, some window w has an inversion
+  on that diagonal.
+* Such an inversion (d, w+1) ≺ (c, w) makes c the last of C's four vertices of parity w
+  in rank w, and d the first of C's four vertices of parity w + 1 in rank w + 1. The
+  C-neighbours of d precede d, and the C-neighbours of c follow c.
+
+QX implies (C) and (D). Together with star transitivity, (E4) at distance 2 and the
+normalisation of CRR, this gives 23k variables and 0.22M clauses for (7, 4). PFR+ is
+unsatisfiable for (3, 2), (5, 3) and (6, 3), and satisfiable for (3, 3), (4, 3), (5, 4)
+and (6, 4). The soundness test passes on all witnesses.
+
+**The distance-2/3 part is not always enough.** WR(4, 3) is satisfiable, yet R(Q₄) = 4.
+`window_cnf.py 4 3 --width 3 --dset 2,3,4` is unsatisfiable, so the antipodal pairs of
+Q₄ are what exclude k = 3 there.
+
+In the same way, a symmetric model of WR(6, 4) glues to a word in which every pair at
+distance 2 or 3 behaves, but 64 pairs at distance 4 and 16 at distances 5–6 alternate.
+So a satisfiable WR(7, 4) would not contradict R(Q₇) > 4.
+
+Against that, the local search of `search/sa.c` behaves as follows:
+
+| instance | pairs required not to alternate | outcome |
+|---|---|---|
+| (4, 3) | distances 2, 3 | solution after 19k moves |
+| (4, 3) | all distances | stalls at 1 violation |
+| (6, 4) | distances 2, 3 | solution within minutes |
+| (7, 4) | distances 2, 3 | stalls at 23 violations after 3.4·10⁹ moves |
+
+**No local obstruction for k = 4.**
+
+* *The k = 3 refutations are local.* A minimal unsatisfiable subformula of PFR+(5, 3) has
+  518 of its 12,014 clauses. It uses 42 diagonal conditions, 32 of them from the ten Q₃'s
+  through the normalised vertex 0.
+* *PFR+(7, 4) on balls.* Restricted to Hamming balls, it is satisfiable within a second
+  for:
+  * radius 2, 3 and 4 around 0 (29, 64 and 99 vertices);
+  * radius 2 and 3 around an edge;
+  * radius 2 around a square or a Q₃.
+* *WR(7, 4) on balls.* The exact window CNF (lag normalisation) restricted to the balls
+  of radius 3 and 4 around 0 is satisfiable.
+* *All distances on a ball.* `ball_event_cnf.py` gives the all-distance event CNF of
+  §5 with full transitivity, restricted to a ball around 0, with the lag normalisation.
+  Distances inside a ball around 0 are distances in Q₇, so this is sound; it passes a
+  soundness test on the witnesses. It refutes k = 3 on B₃(0) ⊂ Q₅ and on Q₄ itself. For
+  (7, 4) it is satisfiable on B₃(0), and the run on B₄(0) (60k variables, 4.9M clauses)
+  is in progress.
+* *Backbone of PFR+(6, 4).* The literals common to all solutions of the normalised
+  PFR+(6, 4) are only the normalisation and its transitive closure. The tight case n = 6
+  therefore has no rigid structure to transfer to the seven Q₆ faces of Q₇ through 0.
+
+**Simple counting cannot decide k = 4.** At every rank, each Q₃ has exactly one last and
+one first vertex among its four vertices of that rank's parity. An inversion in window
+w on a diagonal of C needs last_w(C) and first_{w+1}(C) to be antipodal. So every Q₃
+needs at least 4 of its 2k (Q₃, window) slots.
+
+For k = 4 that is half of all slots, independent of n. A single window can serve all
+Q₃'s at once, which a local search over round orders achieves easily. The best Q₇ word
+found uses 68% of all slots (the Q₆ witness uses 60%). Yet 33 of its Q₃'s see only three
+of their four diagonals. The difficulty is therefore diversity (every Q₃ must be a cone
+at all four apex classes over the period), not the number of inversions.
+
+A bound via "escapes" fails similarly. An inversion needs the later endpoint to lie outside
+the span of the other endpoint's neighbours in the round orders of both ranks, and some
+round order already gives such escapes for half of all distance-3 pairs.
+
+**Permutational representants (`poset_dim_cnf.py`).** A word L₁L₂L₃L₄ made of four
+permutations of V(Qₙ) represents Qₙ iff the Lᵢ realise the height-2 poset Pₙ (even < odd
+neighbour). Kissat shows dim(P₃) ≤ 4 and dim(P₄) ≤ 4, but dim(P₅) > 4. So no Qₙ with
+n ≥ 5 has a permutational 4-representant.
+
+**Symmetric ansätze (`symmetric_ansatz.py`).** A symmetry of a representant maps (v, r)
+to (g v, ±r + c) for an automorphism g of Qₙ. A symmetry fixing every rank is trivial,
+so the symmetry group embeds in the dihedral group of order 4k acting on ranks. The script
+imposes invariance under chosen generators on WR(n, k), rejecting groups that do not act
+faithfully on ranks. A satisfying assignment glues to a word as in §6a; an unsatisfiable
+ansatz proves nothing.
+
+For (6, 4):
+* Invariance under v ↦ v ⊕ 0000011 with a rank shift of 4 is satisfiable.
+* Invariance under the order-8 map g = t_{e₀} ∘ (0 1 2 3) (rotate coordinates 0–3, then
+  flip coordinate 0) with rank shift 1 is satisfiable.
+* Several other cyclic groups are satisfiable, as is the reflection
+  (v, r) ↦ (v ⊕ 000011, −r).
+* All 48 dihedral groups of order 16 that were tested are unsatisfiable.
+
+For (7, 4):
+* The same order-8 map g = t_{e₀} ∘ (0 1 2 3) with rank shift 1 gives an unsatisfiable
+  ansatz within minutes.
+* Order-4 and order-2 ansätze ran out of the 25-minute budget.
 
 ## 7. Certificates (`certify/`)
 
