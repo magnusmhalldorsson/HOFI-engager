@@ -15,28 +15,24 @@ from soundness_test import event_positions, normalise
 
 
 def max_lag_event(w, n):
+    """(M, position, vertex) of a maximiser (x, r) of the antipodal lag with A_x(r+2) = M - 2
+    (one exists unless M is attained by a constant pattern, which non-alternation forbids)."""
     pos, k = event_positions(w, n)
     full = (1 << n) - 1
-    best = None
     L = len(w)
-    for i in range(L):
-        pass
-    # enumerate the events of one period through their positions
+    def lag(x, r):
+        g = sum(1 for s in range(r - (n - 2), r + n - 1, 2) if pos(x ^ full, s) < pos(x, r))
+        return 2 * g - (n - 2)
     events = []
-    seen = {}
     for x in range(1 << n):
         for r in range(-2 * k, 4 * k):
-            if (r - popcount(x)) % 2:
-                continue
-            p = pos(x, r)
-            if 0 <= p < L:
-                events.append((p, x, r))
-    for p, x, r in events:
-        g = sum(1 for s in range(r - (n - 2), r + n - 1, 2) if pos(x ^ full, s) < pos(x, r))
-        A = 2 * g - (n - 2)
-        if best is None or A > best[0]:
-            best = (A, p, x)
-    return best
+            if (r - popcount(x)) % 2 == 0 and 0 <= pos(x, r) < L:
+                events.append((pos(x, r), x, r))
+    M = max(lag(x, r) for _, x, r in events)
+    for p, x, r in sorted(events):
+        if lag(x, r) == M and lag(x, r + 2) == M - 2:
+            return M, p, x
+    raise AssertionError("no maximiser followed by a drop -- impossible for a representant")
 
 
 def normalise_to_event(w, n, p, x):
