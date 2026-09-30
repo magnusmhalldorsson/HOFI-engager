@@ -14,9 +14,12 @@ The approach has two parts:
 > **Status: work in progress.** Part 1 is complete. For n ≤ 6 the machinery reproduces
 > R(Q₃) = 3 and R(Q₄) = R(Q₅) = 4, and shows that Q₆ is 4-representable. These results
 > are cross-checked against a theory-free encoding, and explicit witness words are in
-> `witnesses/`. The Q₇ instance (102,720 variables, 1,640,391 clauses with
-> `--tri samerank`) is still being solved with proof logging. No unsatisfiability
-> certificate exists yet, so the claim is **not yet established** by this directory.
+> `witnesses/`.
+>
+> For Q₇ the instance is split exhaustively into three cases (§6). Each case is being
+> solved with CaDiCaL in restartable segments, and every segment is checked by the
+> formally verified checker cake_lpr (§7). No case has been refuted yet, so the claim is
+> **not yet established** by this directory.
 
 <!-- RESULTS-PLACEHOLDER -->
 
@@ -143,7 +146,66 @@ samerank instance already proves the claim.
 **Consequence.** If the CNF for (n, k) = (7, 4) is unsatisfiable, Q₇ is not
 4-representable.
 
-## 6. Checks of the encoding
+## 6. Case split on the antipodal lag (`antipodal_cases.py`)
+
+For an event (x, r), let x′ = x ⊕ 11…1 be the antipode of x, and define the **antipodal
+lag** A_x(r) = H_{x,r}(x′) = 2g(r) − (n − 2). Here g(r) counts the undetermined
+x′-events that precede (x, r).
+
+**Lemma 4.** For n = 7, the maximum lag M = max A_x(r) lies in {3, 5, 7}.
+
+*Proof.* Fix an antipodal pair. Each of its 4(n−1) undetermined event pairs per period
+is counted exactly once, either in some g_{x,x′} or in some g_{x′,x}. So the lags of
+the pair average to 1. If every lag were ≤ 1, every lag would equal 1, g would be
+constant, and x, x′ would alternate. Lags are odd when n is odd. ∎
+
+Two further facts are used:
+
+* The same monotonicity gives A_x(r+2) ≥ A_x(r) − 2.
+* A maximiser followed by a maximiser in every round would make the lag constant. So
+  some maximiser (x, r) has A_x(r+2) = M − 2.
+
+The three cases, with the normalisation each allows:
+
+| case | assumption | normalisation |
+|---|---|---|
+| I | every lag ≤ 3 | shortest arc at (0, 0), as in §4 |
+| II | every lag ≤ 5; A₀(0) = 5 and A₀(2) = 3 | maximiser followed by a drop, moved to (0, 0) |
+| III | A₀(0) = 7 and A₀(2) = 5 | maximiser followed by a drop, moved to (0, 0) |
+
+In all three cases the coordinates are then sorted inside the arc (0,0) → (0,2). The
+bound in case I is global and invariant under symmetries, which is why the shortest-arc
+normalisation is still available there. `case_split_test.py` checks every clause of the
+right case against normalised genuine representants.
+
+In case III, vertex 0's whole view is the cone H(v) = |v|. A genuine Q₆ representant
+with such a cone exists (`witnesses/q6_k4_cone.txt`), so this case cannot be dismissed by
+restricting to a 6-dimensional layer.
+
+## 7. Certificates (`certify/`)
+
+Container restarts make single long solver runs impractical here. Each case is instead
+solved in segments by `certify/segdriver.py`:
+
+* Segment i runs CaDiCaL for at most 20 minutes on Fᵢ, writing a binary LRAT proof.
+* When a segment ends without an answer, `certify/lratx.c` does three things:
+  * it takes the longest complete prefix of the proof (this also covers a solver killed
+    mid-write);
+  * it checks that the prefix contains only RUP steps (positive hints), so every derived
+    clause is implied by F₁;
+  * it collects the clauses Kᵢ still alive at the end of that prefix, keeping those with
+    ≤ 40 literals.
+* cake_lpr, a proof checker verified in CakeML, then confirms that the prefix transforms
+  Fᵢ into a formula containing Kᵢ ("s VERIFIED TRANSFORMATION").
+* The next segment runs on Fᵢ₊₁ = F₁ ∪ Kᵢ.
+* A segment that reports UNSAT is checked with cake_lpr against its own input
+  ("s VERIFIED UNSAT").
+
+By induction every Fᵢ has exactly the same models as F₁. So one verified refutation of
+any Fᵢ refutes F₁. Each case's `ledger.txt` records every segment: its proof hash, the
+number of lemmas carried forward, and the checker's verdict.
+
+## 8. Checks of the encoding
 
 * `small_cases.py` solves the event model for n ≤ 5 (and n = 6 with `--q6`). It compares
   every answer with a theory-free encoding: a linear order on all k·2ⁿ occurrences with
@@ -153,13 +215,13 @@ samerank instance already proves the claim.
   `check_word.py`, and normalises it as in §4. It then rebuilds the height function,
   asserting that the potential of Lemma 2 exists, and checks that every clause of all
   three CNF variants is satisfied. It passes on the witnesses in `witnesses/` (Q₃ with
-  k = 3; Q₄ with k = 4, 5; Q₅ and Q₆ with k = 4) and on 38 further random representants
-  with n = 3..5 and k = 3..6.
+  k = 3; Q₄ with k = 4, 5; Q₅ and Q₆ with k = 4, including the Q₆ witness through a
+  cone) and on 38 further random representants with n = 3..5 and k = 3..6.
 * The CNF generator was written three times: `event_cnf.py` and two independent
   implementations used during development. All three produce identical clause sets for
   n = 3..7.
 
-## 7. Reproducing
+## 9. Reproducing
 
 ```sh
 pip install python-sat                 # for small_cases.py only
