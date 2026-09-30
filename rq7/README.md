@@ -28,6 +28,11 @@ The approach has two parts:
 > for (7, 4). It is satisfiable for (4, 3) even though R(Q₄) = 4, see §6b. In that case
 > only the all-distance encodings (§5, §6, `ball_event_cnf.py`) can succeed.
 
+> **Upper bounds (§10).** `search/sa.c` also finds a 5-uniform representant of Q₇ and of Q₈
+> (`witnesses/q7_k5.txt`, `q8_k5.txt`) and a 6-uniform one of Q₉ (`q9_k6.txt`), so
+> R(Q₇) ≤ R(Q₈) ≤ 5 and R(Q₉) ≤ 6. A 5-uniform Q₉ was searched for and not found. None of
+> this bears on the lower bound R(Q₇) ≥ 5, which is the open goal of this directory.
+
 <!-- RESULTS-PLACEHOLDER -->
 
 > **Heuristic evidence (not a proof).** `search/sa.c` is a weighted local search over
@@ -465,3 +470,48 @@ lrat-trim q7.cnf q7.lrat                           # prints "s VERIFIED"
 
 The solvers and checkers used were CaDiCaL 2.x, Kissat 4.0.4, lrat-trim 0.2.0, and
 lrat-check / drat-trim from the drat-trim repository.
+
+## 10. Upper bounds from local search: Q₇, Q₈, Q₉
+
+`search/sa.c` (§ heuristic evidence above) finds representants, never refutations. Build it
+with `cc -O3 -march=native -o sa search/sa.c -lm`; a solution is written to the output file
+and must be checked with `check_word.py`.
+
+| graph | k | witness | found by | cost |
+|---|---|---|---|---|
+| Q₇ | 5 | `witnesses/q7_k5.txt` | earlier session; reproduced by `sa 7 5 seed 120 T B PT out.txt -` with T 0.2 to 0.5, B 10⁵ or 10⁶, PT 100 or 400 | 0.4 to 11 CPU-s, 12 of 12 runs |
+| Q₈ | 5 | `witnesses/q8_k5.txt` | `sa 8 5 114 3000 0.8 100000 100 out.txt -` | 372M moves, 335 CPU-s, 1 of 16 seeds |
+| Q₉ | 6 | `witnesses/q9_k6.txt` | `sa 9 6 501 900 0.8 100000 100 out.txt -` | 19M moves, 40 CPU-s, 4 of 4 seeds (30 to 110 s) |
+
+The Q₈ and Q₉ words are 1280 and 3072 letters long. Their SHA-256 hashes start
+`dd984615aa7a24b2` and `d1015746b7e19b6b`. Each passes `check_word.py`, and each was also checked by a
+second script, not committed here, that tests the subword definition directly and finds all
+edges alternating and no alternating non-edge. That script rejects mutated words, words with
+two adjacent cube-edge letters swapped, and a word tested against the wrong n.
+
+Since induced subgraphs of a k-representable graph are k-representable (F2), this gives
+R(Q₇) ≤ R(Q₈) ≤ 5 and R(Q₉) ≤ 6. It says nothing about the lower bound. If Q₇ is not
+4-representable, which is the goal of this directory, then R(Q₇) = R(Q₈) = 5. If Q₇ is
+4-representable, R(Q₈) is still open between 4 and 5.
+
+**Q₉ with k = 5 was not found.** About 17 cores ran for 40 minutes.
+
+* All-distance runs plateau at 417 to 530 violated non-edges out of 128,512, independent of
+  the seed, of T between 0.3 and 1.0, and of the starting word. Distance 3 accounts for about
+  half of the remaining violations and distance 5 for about a quarter. One family of starts
+  was a 6-uniform Q₉ representant with the first occurrence of every letter deleted. That
+  keeps all edges alternating but starts at about 2,600 violations and ends on the same
+  plateau. (These starts used a local patch of `sa.c` that reads an initial word from an
+  environment variable; the patch is not committed.)
+* The k = 6 control above shows the search itself scales to Q₉.
+* Constraining fewer distances, on Q₉ with k = 5. Distance 2 alone is solved at once. Distance
+  3 alone stalled at 70 to 82 violations in short runs, and one 17-minute run reached zero
+  (1.6·10⁹ moves; that word leaves 3,147 non-edges alternating at other distances). Distances
+  2 and 3 together stalled at 142 violations in a single 150-second run, not extended.
+* On Q₈ with k = 5 the same restricted constraint sets (distance 3 alone; distances 2 and 3)
+  are solved in seconds.
+
+This is heuristic evidence only. A stalled annealer proves nothing, and the same kind of stall
+occurs on instances whose status is unknown (Q₇ with k = 4, §6b). The exact tool for a
+proof would be the window CNF WR(9, 5) of §6a, and WR(7, 4) at 4.4M clauses has already
+outrun the solvers.
