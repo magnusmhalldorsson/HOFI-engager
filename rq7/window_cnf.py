@@ -25,13 +25,15 @@ from event_cnf import EventCNF, popcount
 
 
 class WindowCNF(EventCNF):
-    def __init__(self, n, k, dset=(2, 3), norm="shortest"):
+    def __init__(self, n, k, dset=(2, 3), norm="shortest", width=2):
         super().__init__(n, k, shortest=(norm == "shortest"))
         self.dset = set(dset)
         self.norm = norm
+        self.width = width            # number of consecutive ranks in a window
+        assert max(self.dset) <= width + 1, "distance d needs windows of width >= d - 1"
 
     def before(self, a, r, b, s):
-        if a != b and abs(s - r) >= 2 and abs(s - r) < popcount(a ^ b):
+        if a != b and abs(s - r) >= self.width and abs(s - r) < popcount(a ^ b):
             return None
         return super().before(a, r, b, s)
 
@@ -49,7 +51,7 @@ class WindowCNF(EventCNF):
             d = popcount(a ^ b)
             if d < 2 or d not in self.dset:
                 continue
-            assert d <= 3
+            assert d <= self.width + 1
             ors = []
             for dl in range(-(d - 2), d - 1, 2):
                 lits = [self.before(b, r + dl, a, r) for r in self.ranks(a)]
@@ -60,14 +62,13 @@ class WindowCNF(EventCNF):
             self.add(ors)
 
     def windows(self):
-        """transitivity in every window (ranks r, r+1): each triangle once -- triangles
-        inside a single rank are generated only in the window where that rank comes first"""
-        P = self.P
+        """transitivity in every window (ranks r .. r+width-1), each triangle once: a triangle
+        is generated in the window starting at its smallest rank"""
+        P, W = self.P, self.width
         for r in range(P):
-            ev = [(v, r) for v in self.V if popcount(v) % 2 == r % 2] + \
-                 [(v, r + 1) for v in self.V if popcount(v) % 2 == (r + 1) % 2]
+            ev = [(v, s) for s in range(r, r + W) for v in self.V if popcount(v) % 2 == s % 2]
             for e1, e2, e3 in itertools.combinations(ev, 3):
-                if e1[1] == e2[1] == e3[1] == r + 1:
+                if min(e1[1], e2[1], e3[1]) != r:
                     continue
                 x1 = self.before(e1[0], e1[1], e2[0], e2[1])
                 x2 = self.before(e2[0], e2[1], e3[0], e3[1])
@@ -142,9 +143,12 @@ if __name__ == "__main__":
     ap.add_argument("k", type=int)
     ap.add_argument("-o", "--out", required=True)
     ap.add_argument("--norm", choices=["shortest", "lag"], default="shortest")
+    ap.add_argument("--width", type=int, default=2)
+    ap.add_argument("--dset", default="2,3")
     ap.add_argument("--revlex", type=int, default=0,
                     help="break time reversal by a lex-leader constraint on this many variables")
     a = ap.parse_args()
-    E = WindowCNF(a.n, a.k, norm=a.norm).build(revlex=a.revlex)
+    E = WindowCNF(a.n, a.k, norm=a.norm, width=a.width,
+                  dset=[int(x) for x in a.dset.split(",")]).build(revlex=a.revlex)
     E.write(a.out)
     print(f"WR({a.n},{a.k}): {len(E.var)} variables, {len(E.clauses)} clauses -> {a.out}")

@@ -95,7 +95,7 @@ def cake(args):
 def run_segment(job, i, T):
     d = os.path.join(ROOT, 'segs', job)
     F = os.path.join(d, f'F{i}.cnf'); P = os.path.join(d, f'seg{i}.lrat'); L = os.path.join(d, f'seg{i}.log')
-    cmd = [CADICAL, '--lrat=true', '--binary=true', '-t', str(T), '-f', F, P]
+    cmd = [CADICAL, '--lrat=true', '--binary=true'] + os.environ.get('CADICAL_OPTS', '').split() + ['-t', str(T), '-f', F, P]
     with open(L, 'w') as lf:
         subprocess.run(cmd, stdout=lf, stderr=subprocess.STDOUT)
 

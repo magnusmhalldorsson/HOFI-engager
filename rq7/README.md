@@ -16,10 +16,12 @@ The approach has two parts:
 > are cross-checked against a theory-free encoding, and explicit witness words are in
 > `witnesses/`.
 >
-> For Q₇ the instance is split exhaustively into three cases (§6). Each case is being
-> solved with CaDiCaL in restartable segments, and every segment is checked by the
-> formally verified checker cake_lpr (§7). No case has been refuted yet, so the claim is
-> **not yet established** by this directory.
+> For Q₇ the current target is the window CNF WR(7, 4) of §6a. It is an exact encoding
+> of the distance-2/3 part of the problem, with 51k variables and 4.4M clauses, and it
+> needs no case split. Solvers are running on it, one of them as a restartable CaDiCaL
+> chain checked by cake_lpr (§7). The earlier three-case instances of §6 are paused. No
+> instance has been refuted yet, so the claim is **not yet established** by this
+> directory.
 
 <!-- RESULTS-PLACEHOLDER -->
 
@@ -30,14 +32,15 @@ The approach has two parts:
 > constrained.
 >
 > On Q₇ it stalls far from a solution: the best word leaves 86 of 7680 non-adjacent pairs
-> alternating after 10⁹ moves. It also stalls at 31 when only pairs at distance 2 and 3
-> are required not to alternate. On Q₄, Q₅ and Q₆ with k = 3, all of which are known to
-> be non-representable, it behaves the same way.
+> alternating after 10⁹ moves. It still stalls at 23 when only pairs at distance 2 and 3
+> are required not to alternate (3.4·10⁹ moves). With distance 2 alone it finds a word at
+> once, and with distance 3 alone it gets within 2 violations. On Q₄, Q₅ and Q₆ with
+> k = 3, all of which are known to be non-representable, it behaves the same way.
 >
 > This suggests that the obstruction already lives in the distance-2 and distance-3
-> pairs. `local_cnf.py` and `window_cnf.py` encode relaxations of the event CNF that keep
-> only those short-range relations. Their unsatisfiability would suffice. For k = 3 the
-> distance-3 relaxation already refutes Q₅.
+> pairs. `window_cnf.py` (§6a) encodes exactly that part of the problem. `local_cnf.py`
+> and `crr_cnf.py` encode weaker relaxations. The unsatisfiability of any of them would
+> suffice. For k = 3 all three already refute Q₅.
 
 ---
 
@@ -197,6 +200,76 @@ right case against normalised genuine representants.
 In case III, vertex 0's whole view is the cone H(v) = |v|. A genuine Q₆ representant
 with such a cone exists (`witnesses/q6_k4_cone.txt`), so this case cannot be dismissed by
 restricting to a 6-dimensional layer.
+
+## 6a. Distances 2 and 3 only: the window CNF (`window_cnf.py`)
+
+For a non-edge xy with d(x, y) = d, condition (E4) mentions only the event pairs
+((x, r), (y, s)) with |s − r| < d. For d = 2 these have s = r, and for d = 3 they have
+|s − r| = 1. So the non-alternation of all pairs at distance 2 or 3 is a statement about
+events of equal or adjacent ranks.
+
+For r ∈ ℤ, let the **window** W_r be the set of events of rank r or r + 1.
+
+**Lemma 5.** Let ≺ be the event order of a k-uniform representant of Qₙ, and let ≺_r be
+its restriction to W_r. Then:
+(W1) each ≺_r is a linear order with (y, r) ≺_r (z, r+1) for every edge yz;
+(W2) ≺_r and ≺_{r+1} agree on the events of rank r + 1;
+(W3) the family is periodic: shifting all ranks by 2k maps ≺_r to ≺_{r+2k};
+(W4) (E4) holds for every pair at distance 2 or 3.
+
+This is immediate from Lemma 3. `window_cnf.py` writes (W1)–(W4) as a CNF WR(n, k): one
+variable per undetermined pair inside a window, all transitivity triangles inside each
+window, the non-alternation clauses for d ∈ {2, 3}, and the clauses of §4 that live
+inside windows. Every clause is a clause of `event_cnf.py --tri all` restricted to window
+pairs, so:
+
+**Consequence.** If WR(7, 4) is unsatisfiable, then Q₇ is not 4-representable.
+
+**Remark (why this is the right relaxation).** The converse of Lemma 5 also holds. Any
+family (≺_r) with (W1)–(W3) glues to a periodic event order. Two linear orders that agree
+on the intersection of their ground sets amalgamate without cycles, so the union of the
+windows of any finite rank interval is acyclic, and hence so is the union of all windows.
+A shift-invariant acyclic relation in which every event precedes its own shift has a
+shift-invariant linear extension (a periodic time function exists because every cycle of
+the quotient graph has positive total shift).
+
+So WR(n, k) is satisfiable exactly when there is a k-uniform word in which every edge pair
+alternates and no pair at distance 2 or 3 alternates. `window_cnf.py` is thus an *exact*
+encoding of that problem, not merely a relaxation. The gluing has been checked on
+solver models for (n, k) = (4, 3), (5, 4) and (6, 4); the glued words were verified
+letter by letter.
+
+**Normalisations.** Two alternative normalisations are available (`--norm`):
+* `shortest` (§4): the arc (0,0) → (0,2) is a globally shortest arc;
+* `lag`: (0,0) maximises the lag t(e) − (L/2k)·rank(e) over all events e, where t(e) is
+  the position of e in the bi-infinite word and L = k·2ⁿ. Lags are periodic, so a
+  maximiser exists. Every event f of rank ≤ 0 then satisfies t(f) ≤ t(0,0), hence
+  precedes (0,0). At that moment vertex 0 is the unique global minimum of the height
+  function.
+Both are followed by sorting the neighbours of 0 inside the arc (0,0) → (0,2).
+
+With `shortest`, the map ρ : (a, r) ≺ (b, s) ↦ (π b, 2 − s) ≺ (π a, 2 − r) is a symmetry
+of the CNF. Here ρ is time reversal combined with reversing the coordinate order π. It
+maps windows to windows, the arc (0,0) → (0,2) to itself, and the neighbour order to
+itself. This was checked clause by clause for n = 4, 5, and ρ maps models to models.
+`--revlex m` adds the lex-leader constraint X ≤_lex ρ(X) on m variables of the view of
+(0,0). Either a normalised order or its reverse satisfies it.
+
+**Wider windows.** With `--width W` the windows contain W consecutive ranks, and
+non-alternation can be imposed for all distances d ≤ W + 1 (`--dset`). The same gluing
+argument applies. For example, `--width 3 --dset 2,3,4` is exact for Q₄ and refutes k = 3
+there, which reproduces R(Q₄) > 3.
+
+**A smaller relaxation (`crr_cnf.py`).** Keep only the orders inside single ranks. An
+inversion (d, w+1) ≺ (c, w) at distance 3 forces two things: every neighbour of d
+precedes c in rank w, and d precedes every neighbour of c in rank w + 1. So (E4) at
+distance 3 requires some window in which both hold. Together with (E4) at distance 2,
+this gives CRR(n, k), with about 0.9M clauses for (7, 4). Its normalisation makes (0,0)
+the last event of rank 0, by translation, and sorts the neighbours of 0 in rank 1. It
+refutes k = 3 for Q₅ and is satisfiable for (6, 4).
+
+`window_soundness_test.py` checks every clause of these CNFs, under every normalisation,
+against normalised genuine representants.
 
 ## 7. Certificates (`certify/`)
 
