@@ -1,0 +1,20 @@
+2026-09-30 00:12:46 seg1: start (T=1200s) on F1 (29257515 bytes)
+2026-09-30 00:33:14 seg1: unfinished; valid 499735310 of 499735310 bytes; added 1067643; deletion ids 1084997; input clauses 1640903; kept 125910; proof sha256 d00210e1a14bb3b7a1bd3a7ee11be6e2a4daf5def275da28a54d2a3a27a7c2c7; cake_lpr: 
+2026-09-30 00:33:14 seg1: TRANSFORMATION VERIFICATION FAILED
+2026-09-30 00:36:12 seg1: found existing proof (previous run interrupted); processing
+2026-09-30 00:37:31 seg1: unfinished; valid 499735310 of 499735310 bytes; added 1067643; deletion ids 1084997; input clauses 1640903; kept 125910; proof sha256 d00210e1a14bb3b7a1bd3a7ee11be6e2a4daf5def275da28a54d2a3a27a7c2c7; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 00:37:33 seg2: start (T=1200s) on F2 (38177533 bytes)
+2026-09-30 00:59:06 seg2: unfinished; valid 515572887 of 515572887 bytes; added 1033149; deletion ids 1020020; input clauses 1766813; kept 242703; proof sha256 b72df483e015a38e5d673d3da6a71554596ead349507c60209a51d51c74000be; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 00:59:07 seg3: start (T=1200s) on F3 (49371402 bytes)
+2026-09-30 01:20:18 seg3: unfinished; valid 327237839 of 327237839 bytes; added 865909; deletion ids 887045; input clauses 1883606; kept 332665; proof sha256 81ad15213a166e143bc61b8e1eac644974cb2524ff31e284183788221269b0e4; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 01:20:19 seg4: start (T=1200s) on F4 (58143129 bytes)
+2026-09-30 01:42:03 seg4: unfinished; valid 216009399 of 216009399 bytes; added 607980; deletion ids 651746; input clauses 1973568; kept 402778; proof sha256 537ea34404b6b67b6c725f5e96d45c6f66d057f6e06a50803d0065b07a53b7f2; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 01:42:04 seg5: start (T=1200s) on F5 (65774796 bytes)
+2026-09-30 02:03:23 seg5: unfinished; valid 305381376 of 305381376 bytes; added 650625; deletion ids 693714; input clauses 2043681; kept 480755; proof sha256 d6d27daa2001773c0d22f685735bdfcf7b59afe15d12a30472a3de136d41d4bd; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 02:03:24 seg6: start (T=1200s) on F6 (74487924 bytes)
+2026-09-30 02:24:57 seg6: unfinished; valid 328416042 of 328416042 bytes; added 671871; deletion ids 695296; input clauses 2121658; kept 563739; proof sha256 526e35b31d126e247419ebf0f800456105787184aea04cad662fe37c2729fefe; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 02:24:58 seg7: start (T=1200s) on F7 (84008307 bytes)
+2026-09-30 02:46:51 seg7: unfinished; valid 170813454 of 170813454 bytes; added 389213; deletion ids 447442; input clauses 2204642; kept 622719; proof sha256 14d29ed9ebae1575a4d32ef98cbc80bf73f697f1abb21df6bbf8ab42d4d1c15b; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 02:46:53 seg8: start (T=1200s) on F8 (91189649 bytes)
+2026-09-30 03:08:20 seg8: unfinished; valid 161801660 of 161801660 bytes; added 328110; deletion ids 404956; input clauses 2263622; kept 667178; proof sha256 46daa6662e140af9cac15cf607a717ada357ccfa5a29df875486255977790465; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 03:08:21 seg9: start (T=1200s) on F9 (96536235 bytes)

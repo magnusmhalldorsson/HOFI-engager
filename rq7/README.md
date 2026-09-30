@@ -19,9 +19,9 @@ The approach has two parts:
 > For Q₇ the current targets are the window CNF WR(7, 4) of §6a and its relaxations CRR
 > and PFR+ (§6a, §6b). WR is an exact encoding of the distance-2/3 part of the problem,
 > with 51k variables and 4.4M clauses, and it needs no case split. PFR+ is the smallest
-> sound formula so far (23k variables, 0.22M clauses). Solvers are running on them, one as
-> a restartable CaDiCaL chain checked by cake_lpr (§7). The earlier three-case instances
-> of §6 are paused.
+> sound formula so far (23k variables, 0.22M clauses). Solvers ran on these and on
+> all-distance encodings for between 8 minutes and 3.5 hours each, and none reached a
+> verdict (table in §6c). The runs are stopped.
 >
 > No instance has been refuted yet, so the claim is **not yet established** by this
 > directory. There is also a real risk that the distance-2/3 part alone is satisfiable
@@ -340,8 +340,8 @@ Against that, the local search of `search/sa.c` behaves as follows:
   for any vertex set. It also passes a soundness test on the witnesses.
   * It refutes k = 3 on B₃(0) ⊂ Q₅ and on Q₄ itself. The B₃(0) ⊂ Q₅ refutation is
     checked by cake_lpr via `certify/stream_verify.sh`.
-  * For (7, 4) it is satisfiable on B₃(0). The runs on B₄(0) (60k variables, 4.9M
-    clauses) and B₅(0) (90k variables, 9.2M clauses) are in progress.
+  * For (7, 4) it is satisfiable on B₃(0). On B₄(0) (60k variables, 4.9M clauses) and
+    B₅(0) (90k variables, 9.2M clauses) kissat reached no verdict (§6c).
 * *Backbone of PFR+(6, 4).* The literals common to all solutions of the normalised
   PFR+(6, 4) are only the normalisation and its transitive closure. The tight case n = 6
   therefore has no rigid structure to transfer to the seven Q₆ faces of Q₇ through 0.
@@ -385,6 +385,32 @@ For (7, 4):
 * The same order-8 map g = t_{e₀} ∘ (0 1 2 3) with rank shift 1 gives an unsatisfiable
   ansatz within minutes.
 * Order-4 and order-2 ansätze ran out of the 25-minute budget.
+
+## 6c. Solver runs on Q₇ so far (none finished)
+
+All runs used 4 shared cores. No run reached a verdict; they were stopped at the CPU times
+shown.
+
+| formula | size (vars / clauses) | solver | CPU time |
+|---|---|---|---|
+| WR(7, 4), `shortest` | 51k / 4.36M | kissat, writing DRAT | 2.5 h |
+| WR(7, 4), `shortest` + revlex | 51k / 4.36M | CaDiCaL chain (§7), 3 segments verified | 3.5 h |
+| WR(7, 4), `lag` | 51k / 4.36M | kissat | 47 min |
+| window CNF, width 3, d ≤ 4, `lag` | 79k / 10.1M | kissat | 15 min |
+| CRR(7, 4) | 34k / 0.92M | kissat | 41 min |
+| PFR(7, 4) | 149k / 0.56M | kissat | 1.25 h |
+| PFR+(7, 4) | 23k / 0.22M | kissat | 59 min |
+| PFR+(7, 4), 2 random cubes of 4096 (depth 12) | — | kissat | > 15 min each |
+| all distances on B₄(0) | 60k / 4.9M | kissat | 21 min |
+| all distances on B₅(0) | 90k / 9.2M | kissat | 8 min |
+| §6 cases I–III (all distances) | 103k / 1.64M each | CaDiCaL chains | ≈ 3 h each |
+
+The ledgers of the CaDiCaL chains, with every segment's proof hash and cake_lpr verdict,
+are in `certify/ledgers/`.
+
+The cube sample puts a cube-and-conquer refutation of PFR+(7, 4) at a thousand CPU-hours
+or more. That assumes PFR+(7, 4) is unsatisfiable at all, which is not known (§6b). The
+all-distance encodings are the safer targets, but they are larger.
 
 ## 7. Certificates (`certify/`)
 

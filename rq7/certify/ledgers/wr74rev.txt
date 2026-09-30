@@ -1,0 +1,7 @@
+2026-09-30 04:56:08 seg1: start (T=3600s) on F1 (88014493 bytes)
+2026-09-30 05:58:54 seg1: unfinished; valid 722703833 of 722703833 bytes; added 975924; deletion ids 909043; input clauses 4359752; kept 111820; proof sha256 6c6cb756157d795d740e5f21ca4f39592e82f5d7d365c5268315f03013613261; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 05:58:56 seg2: start (T=3600s) on F2 (98252811 bytes)
+2026-09-30 07:02:23 seg2: unfinished; valid 432621995 of 432621995 bytes; added 665294; deletion ids 578250; input clauses 4471572; kept 213248; proof sha256 ee9984d8e56739f63b49995d71386141a727dc48d6fc2558d6432ca03c0c25b0; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 07:02:26 seg3: start (T=3600s) on F3 (109231481 bytes)
+2026-09-30 08:05:17 seg3: unfinished; valid 383089577 of 383089577 bytes; added 513925; deletion ids 450284; input clauses 4573000; kept 303018; proof sha256 41dda1a6239c01183047639fb7da45dd95228881b7316db16b0d5bd2060d693c; cake_lpr: s VERIFIED TRANSFORMATION (rc=0)
+2026-09-30 08:05:19 seg4: start (T=3600s) on F4 (119520443 bytes)
