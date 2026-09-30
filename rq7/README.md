@@ -23,6 +23,22 @@ The approach has two parts:
 
 <!-- RESULTS-PLACEHOLDER -->
 
+> **Heuristic evidence (not a proof).** `search/sa.c` is a weighted local search over
+> cyclic words in which every edge pair alternates. It finds 4-representants of Q₄, Q₅
+> and Q₆ within seconds to a few minutes. Every Q₆ result is verified by
+> `check_word.py`, including the case where only distance-2 and distance-3 pairs are
+> constrained.
+>
+> On Q₇ it stalls far from a solution: the best word leaves 86 of 7680 non-adjacent pairs
+> alternating after 10⁹ moves. It also stalls at 31 when only pairs at distance 2 and 3
+> are required not to alternate. On Q₄, Q₅ and Q₆ with k = 3, all of which are known to
+> be non-representable, it behaves the same way.
+>
+> This suggests that the obstruction already lives in the distance-2 and distance-3
+> pairs. `local_cnf.py` and `window_cnf.py` encode relaxations of the event CNF that keep
+> only those short-range relations. Their unsatisfiability would suffice. For k = 3 the
+> distance-3 relaxation already refutes Q₅.
+
 ---
 
 ## 1. Definitions and two standard facts
